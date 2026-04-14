@@ -975,15 +975,7 @@ function updateEmbedCode() {
   document.getElementById('embed-code-block').innerText = code;
 }
 
-function copyEmbedCode() {
-  const code = document.getElementById('embed-code-block').innerText;
-  navigator.clipboard.writeText(code);
-  const btn = document.querySelector('.copy-code-btn');
-  btn.innerText = 'Copied!';
-  setTimeout(()=>btn.innerText='Copy code', 2000);
-}
 
-updateEmbedCode();
 </script>
 <script src="script.js"></script>
 
