@@ -1,15 +1,23 @@
 const { OpenAI } = require("openai");
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+exports.handler = async (event) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
 
   try {
     const { message } = JSON.parse(event.body);
+
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [{ role: "system", content: "You are a real estate assistant named Alex." }, { role: "user", content: message }],
+      messages: [
+        { role: "system", content: "You are Alex, a professional real estate assistant for PropAI. Help users book showings." },
+        { role: "user", content: message }
+      ],
     });
 
     return {
@@ -17,6 +25,9 @@ exports.handler = async (event) => {
       body: JSON.stringify({ reply: response.choices[0].message.content }),
     };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message }),
+    };
   }
 };
