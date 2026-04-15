@@ -1,4 +1,4 @@
-const { OpenAI } = require("openai");
+const OpenAI = require("openai");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -6,28 +6,53 @@ const openai = new OpenAI({
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method Not Allowed" }),
+      headers: { "Content-Type": "application/json" },
+    };
   }
 
   try {
-    const { message } = JSON.parse(event.body);
+    const { message } = JSON.parse(event.body || "{}");
+
+    if (!message) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing message" }),
+        headers: { "Content-Type": "application/json" },
+      };
+    }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4.1-mini",
       messages: [
-        { role: "system", content: "You are Alex, a professional real estate assistant for PropAI. Help users book showings." },
-        { role: "user", content: message }
+        {
+          role: "system",
+          content:
+            "You are Alex, a professional real estate assistant for PropAI. Help users book showings.",
+        },
+        {
+          role: "user",
+          content: message,
+        },
       ],
     });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ reply: response.choices[0].message.content }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reply: response.choices[0].message.content,
+      }),
     };
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: error.message || "Unknown server error",
+      }),
     };
   }
 };
