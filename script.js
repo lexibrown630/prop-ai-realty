@@ -2,13 +2,20 @@ let chatHistory = [];
 let currentEmbedTab = 'full';
 
 /* ---------------------------
-   PANEL NAVIGATION
+   SAFE ELEMENT HELPER
+---------------------------- */
+function getEl(id) {
+  return document.getElementById(id);
+}
+
+/* ---------------------------
+   PANEL NAV
 ---------------------------- */
 function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
 
-  const panel = document.getElementById('panel-' + name);
+  const panel = getEl('panel-' + name);
   if (panel) panel.classList.add('active');
 
   const tabs = document.querySelectorAll('.nav-tab');
@@ -20,25 +27,25 @@ function showPanel(name) {
 }
 
 /* ---------------------------
-   CHAT MESSAGE UI
+   CHAT UI
 ---------------------------- */
 function appendMsg(text, cls) {
-  const container = document.getElementById('chat-messages');
-  if (!container) return null;
+  const container = getEl('chat-messages');
+  if (!container) return;
 
   const el = document.createElement('div');
   el.className = 'msg ' + cls;
   el.innerText = text;
+
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
-  return el;
 }
 
 /* ---------------------------
-   MAIN CHAT (DEFAULT)
+   MAIN CHAT
 ---------------------------- */
 async function sendChat() {
-  const input = document.getElementById('chat-input');
+  const input = getEl('chat-input');
   if (!input) return;
 
   const msg = input.value.trim();
@@ -47,10 +54,10 @@ async function sendChat() {
   input.value = '';
   appendMsg(msg, 'user');
 
-  const typingEl = appendMsg('Alex is typing...', 'bot typing');
+  const typing = appendMsg('Alex is typing...', 'bot typing');
 
   try {
-    const response = await fetch('/.netlify/functions/chat', {
+    const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -59,114 +66,110 @@ async function sendChat() {
       })
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (typingEl) typingEl.remove();
+    if (typing) typing.remove?.();
 
-    if (!response.ok) {
-      appendMsg('Server error: ' + (data.error || 'Unknown error'), 'bot');
+    if (!res.ok) {
+      appendMsg('Error: ' + (data.error || 'Request failed'), 'bot');
       return;
     }
 
     appendMsg(data.reply, 'bot');
 
-    chatHistory.push({ role: 'user', content: msg });
-    chatHistory.push({ role: 'assistant', content: data.reply });
-
-  } catch (error) {
-    if (typingEl) typingEl.remove();
-    appendMsg('Request failed: ' + error.message, 'bot');
+  } catch (err) {
+    if (typing) typing.remove?.();
+    appendMsg('Request failed: ' + err.message, 'bot');
   }
 }
 
 /* ---------------------------
-   🏡 LISTING GENERATOR
+   🏡 LISTING GENERATOR (SAFE)
 ---------------------------- */
 async function generateListing() {
-  const input = document.getElementById('chat-input');
-  const msg = input?.value?.trim() || "3 bed 2 bath modern home with pool";
+  console.log("LISTING CLICKED");
 
-  const output = document.getElementById('listing-content');
-
+  const output = getEl('listing-content');
   if (output) output.innerText = "Generating listing...";
 
   try {
-    const response = await fetch('/.netlify/functions/chat', {
+    const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: msg,
+        message: "Modern 3 bed 2 bath home with pool and upgrades",
         type: "listing"
       })
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (!response.ok) {
+    if (!res.ok) {
       if (output) output.innerText = "Error generating listing.";
       return;
     }
 
     if (output) output.innerText = data.reply;
+    console.log("LISTING RESULT:", data.reply);
 
-  } catch (error) {
-    if (output) output.innerText = "Request failed: " + error.message;
+  } catch (err) {
+    if (output) output.innerText = "Request failed: " + err.message;
   }
 }
 
 /* ---------------------------
-   📩 FOLLOW-UP GENERATOR
+   📩 FOLLOW-UP GENERATOR (SAFE)
 ---------------------------- */
 async function generateFollowUp() {
-  const msg = "Lead viewed property but did not respond";
+  console.log("FOLLOWUP CLICKED");
 
-  const output = document.getElementById('followup-output');
-
+  const output = getEl('followup-output');
   if (output) output.innerText = "Generating follow-up...";
 
   try {
-    const response = await fetch('/.netlify/functions/chat', {
+    const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: msg,
+        message: "Lead viewed property but did not respond",
         type: "followup"
       })
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (!response.ok) {
+    if (!res.ok) {
       if (output) output.innerText = "Error generating follow-up.";
       return;
     }
 
     if (output) output.innerText = data.reply;
+    console.log("FOLLOWUP RESULT:", data.reply);
 
-  } catch (error) {
-    if (output) output.innerText = "Request failed: " + error.message;
+  } catch (err) {
+    if (output) output.innerText = "Request failed: " + err.message;
   }
 }
 
 /* ---------------------------
-   BOOKING SLOT SYSTEM (UNCHANGED)
+   BOOKING (UNCHANGED)
 ---------------------------- */
 function selectSlot(btn, slotLabel) {
   document.querySelectorAll('.slot-btn:not(.taken)').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
 
   appendMsg('I want to book the ' + slotLabel + ' slot.', 'user');
-  document.getElementById('booking-confirm')?.classList.add('visible');
+  getEl('booking-confirm')?.classList.add('visible');
 }
 
 /* ---------------------------
    COPY LISTING
 ---------------------------- */
 function copyListing() {
-  const text = document.getElementById('listing-content')?.innerText || '';
+  const text = getEl('listing-content')?.innerText || '';
   navigator.clipboard.writeText(text);
 
-  const el = document.getElementById('copy-success');
+  const el = getEl('copy-success');
   if (el) {
     el.classList.add('visible');
     setTimeout(() => el.classList.remove('visible'), 2500);
@@ -174,7 +177,7 @@ function copyListing() {
 }
 
 /* ---------------------------
-   EMBED SYSTEM (UNCHANGED)
+   EMBED (UNCHANGED)
 ---------------------------- */
 function switchEmbedTab(btn, tab) {
   document.querySelectorAll('.embed-tab').forEach(t => t.classList.remove('active'));
@@ -184,55 +187,37 @@ function switchEmbedTab(btn, tab) {
 }
 
 function updateEmbedCode() {
-  const agency = document.getElementById('agency-name')?.value || 'Your Agency';
-  const color = document.getElementById('primary-color')?.value || '#C9A84C';
-  const tools = document.getElementById('embed-tools')?.value || 'all';
-  const label = document.getElementById('bubble-label')?.value || 'Book a Showing';
-  const pos = document.getElementById('bubble-pos')?.value || 'bottom-right';
+  const agency = getEl('agency-name')?.value || 'Your Agency';
+  const color = getEl('primary-color')?.value || '#C9A84C';
+  const tools = getEl('embed-tools')?.value || 'all';
+  const label = getEl('bubble-label')?.value || 'Book a Showing';
+  const pos = getEl('bubble-pos')?.value || 'bottom-right';
 
   let code = '';
 
   if (currentEmbedTab === 'full') {
-    code = `<!-- PropAI Widget - ${agency} -->
-<iframe
-  src="https://propai.app/widget?agency=${encodeURIComponent(agency)}&color=${encodeURIComponent(color)}&tools=${tools}"
-  width="100%"
-  height="720"
-  frameborder="0"
-  allow="clipboard-write"
-  style="border-radius:16px;overflow:hidden">
-</iframe>`;
-  } else if (currentEmbedTab === 'chat') {
-    code = `<!-- PropAI Chat Bubble - ${agency} -->
+    code = `<!-- PropAI Widget -->
+<iframe src="https://propai.app/widget?agency=${encodeURIComponent(agency)}&color=${encodeURIComponent(color)}&tools=${tools}"
+width="100%" height="720" frameborder="0"></iframe>`;
+  } else {
+    code = `<!-- Embed Script -->
 <script>
-  window.PropAIConfig = {
-    agencyName: "${agency}",
-    primaryColor: "${color}",
-    buttonLabel: "${label}",
-    position: "${pos}"
-  };
+window.PropAIConfig = {
+agencyName: "${agency}",
+primaryColor: "${color}",
+buttonLabel: "${label}",
+position: "${pos}"
+};
 <\/script>
 <script src="https://propai.app/embed.js" async><\/script>`;
-  } else {
-    code = `/* WordPress - add to functions.php or a plugin */
-function propai_widget() {
-  echo '<iframe
-    src="https://propai.app/widget?agency=${encodeURIComponent(agency)}&color=${encodeURIComponent(color)}&tools=${tools}"
-    width="100%" height="720"
-    frameborder="0"
-    style="border-radius:16px">
-  </iframe>';
-}
-add_shortcode('propai', 'propai_widget');
-/* Then use [propai] shortcode in any page/post */`;
   }
 
-  const block = document.getElementById('embed-code-block');
+  const block = getEl('embed-code-block');
   if (block) block.innerText = code;
 }
 
 function copyEmbedCode() {
-  const text = document.getElementById('embed-code-block')?.innerText || '';
+  const text = getEl('embed-code-block')?.innerText || '';
   navigator.clipboard.writeText(text);
 }
 
