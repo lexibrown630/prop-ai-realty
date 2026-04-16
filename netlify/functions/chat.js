@@ -22,7 +22,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { message } = JSON.parse(event.body || "{}");
+    const { message, type } = JSON.parse(event.body || "{}");
 
     if (!message) {
       return {
