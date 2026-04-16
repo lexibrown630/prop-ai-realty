@@ -34,19 +34,39 @@ exports.handler = async (event) => {
 
     const response = await client.chat.completions.create({
       model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Alex, a helpful and professional real estate assistant. Keep responses short, friendly, and focused on booking showings or answering property questions.",
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-    });
+      let systemPrompt = "";
+let userPrompt = message;
 
+// Decide behavior based on feature
+if (type === "listing") {
+  systemPrompt = "You are a real estate copywriter. Write detailed, compelling, high-end property listings that highlight features, lifestyle, and urgency.";
+
+  userPrompt = `Create a real estate listing based on this:
+${message}
+
+Make it engaging, well-structured, and persuasive.`;
+}
+
+else if (type === "followup") {
+  systemPrompt = "You are a real estate agent following up with leads. Be friendly, natural, and persuasive without sounding pushy.";
+
+  userPrompt = `Write a follow-up message for this situation:
+${message}
+
+Keep it conversational and professional.`;
+}
+
+else {
+  systemPrompt = "You are Alex, a helpful real estate assistant focused on booking showings and answering questions.";
+}
+
+const response = await client.chat.completions.create({
+  model: "gpt-4.1-mini",
+  messages: [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ],
+});
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
