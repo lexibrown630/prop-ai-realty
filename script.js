@@ -1,6 +1,9 @@
 let chatHistory = [];
 let currentEmbedTab = 'full';
 
+/* ---------------------------
+   PANEL NAVIGATION
+---------------------------- */
 function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -10,11 +13,15 @@ function showPanel(name) {
 
   const tabs = document.querySelectorAll('.nav-tab');
   const map = { tools: 0, followup: 1, listing: 2, booking: 3, embed: 4 };
+
   if (map[name] !== undefined && tabs[map[name]]) {
     tabs[map[name]].classList.add('active');
   }
 }
 
+/* ---------------------------
+   CHAT MESSAGE UI
+---------------------------- */
 function appendMsg(text, cls) {
   const container = document.getElementById('chat-messages');
   if (!container) return null;
@@ -27,6 +34,9 @@ function appendMsg(text, cls) {
   return el;
 }
 
+/* ---------------------------
+   MAIN CHAT (DEFAULT)
+---------------------------- */
 async function sendChat() {
   const input = document.getElementById('chat-input');
   if (!input) return;
@@ -36,17 +46,17 @@ async function sendChat() {
 
   input.value = '';
   appendMsg(msg, 'user');
-  chatHistory.push({ role: 'user', content: msg });
 
   const typingEl = appendMsg('Alex is typing...', 'bot typing');
 
   try {
     const response = await fetch('/.netlify/functions/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ message: msg })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        type: "chat"
+      })
     });
 
     const data = await response.json();
@@ -59,13 +69,88 @@ async function sendChat() {
     }
 
     appendMsg(data.reply, 'bot');
+
+    chatHistory.push({ role: 'user', content: msg });
     chatHistory.push({ role: 'assistant', content: data.reply });
+
   } catch (error) {
     if (typingEl) typingEl.remove();
     appendMsg('Request failed: ' + error.message, 'bot');
   }
 }
 
+/* ---------------------------
+   🏡 LISTING GENERATOR
+---------------------------- */
+async function generateListing() {
+  const input = document.getElementById('chat-input');
+  const msg = input?.value?.trim() || "3 bed 2 bath modern home with pool";
+
+  const output = document.getElementById('listing-content');
+
+  if (output) output.innerText = "Generating listing...";
+
+  try {
+    const response = await fetch('/.netlify/functions/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        type: "listing"
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (output) output.innerText = "Error generating listing.";
+      return;
+    }
+
+    if (output) output.innerText = data.reply;
+
+  } catch (error) {
+    if (output) output.innerText = "Request failed: " + error.message;
+  }
+}
+
+/* ---------------------------
+   📩 FOLLOW-UP GENERATOR
+---------------------------- */
+async function generateFollowUp() {
+  const msg = "Lead viewed property but did not respond";
+
+  const output = document.getElementById('followup-output');
+
+  if (output) output.innerText = "Generating follow-up...";
+
+  try {
+    const response = await fetch('/.netlify/functions/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        type: "followup"
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (output) output.innerText = "Error generating follow-up.";
+      return;
+    }
+
+    if (output) output.innerText = data.reply;
+
+  } catch (error) {
+    if (output) output.innerText = "Request failed: " + error.message;
+  }
+}
+
+/* ---------------------------
+   BOOKING SLOT SYSTEM (UNCHANGED)
+---------------------------- */
 function selectSlot(btn, slotLabel) {
   document.querySelectorAll('.slot-btn:not(.taken)').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
@@ -74,15 +159,23 @@ function selectSlot(btn, slotLabel) {
   document.getElementById('booking-confirm')?.classList.add('visible');
 }
 
+/* ---------------------------
+   COPY LISTING
+---------------------------- */
 function copyListing() {
   const text = document.getElementById('listing-content')?.innerText || '';
   navigator.clipboard.writeText(text);
-  document.getElementById('copy-success')?.classList.add('visible');
-  setTimeout(() => {
-    document.getElementById('copy-success')?.classList.remove('visible');
-  }, 2500);
+
+  const el = document.getElementById('copy-success');
+  if (el) {
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 2500);
+  }
 }
 
+/* ---------------------------
+   EMBED SYSTEM (UNCHANGED)
+---------------------------- */
 function switchEmbedTab(btn, tab) {
   document.querySelectorAll('.embed-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
@@ -143,6 +236,9 @@ function copyEmbedCode() {
   navigator.clipboard.writeText(text);
 }
 
+/* ---------------------------
+   INIT
+---------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
   updateEmbedCode();
 });
