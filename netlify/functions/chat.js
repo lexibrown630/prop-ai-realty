@@ -5,13 +5,22 @@ const openai = new OpenAI({
 });
 
 exports.handler = async (event) => {
+  if (!process.env.OPENAI_API_KEY) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Missing OPENAI_API_KEY" }),
+    };
+  }
+
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      body: JSON.stringify({ error: "Method Not Allowed" }),
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method Not Allowed" }),
     };
   }
+  
 
   try {
     const { message } = JSON.parse(event.body || "{}");
