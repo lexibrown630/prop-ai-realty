@@ -19,20 +19,13 @@ exports.handler = async (event) => {
       GOOGLE_CALENDAR_ID,
     } = process.env;
 
-    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Missing env vars" }),
-      };
-    }
-
     const body = JSON.parse(event.body || "{}");
     const { title, startTime, endTime, description, agentId } = body;
 
     if (!startTime || !endTime) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Missing time" }),
+        body: JSON.stringify({ error: "Missing startTime or endTime" }),
       };
     }
 
