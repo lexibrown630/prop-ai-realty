@@ -35,7 +35,9 @@ function makeAuth() {
 
   if (!email || !key) throw new Error("Missing Google auth env vars");
 
-  const privateKey = key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
+  const privateKey = key.includes("\\n")
+    ? key.replace(/\\n/g, "\n")
+    : key;
 
   return new google.auth.JWT(email, null, privateKey, [
     "https://www.googleapis.com/auth/calendar",
@@ -58,6 +60,7 @@ exports.handler = async (event) => {
     }
 
     const body = JSON.parse(event.body || "{}");
+
     const {
       action = "book",
       title,
@@ -197,7 +200,7 @@ exports.handler = async (event) => {
     }
 
     // =====================
-    // ONLY CHANGE: ADD REMINDERS HERE
+    // CREATE EVENT WITH REMINDERS
     // =====================
     const created = await calendar.events.insert({
       calendarId,
