@@ -51,9 +51,7 @@ exports.handler = async (event) => {
       return res(405, { success: false, error: "Method not allowed" });
     }
 
-    const {
-      GOOGLE_CALENDAR_ID,
-    } = process.env;
+    const { GOOGLE_CALENDAR_ID } = process.env;
 
     if (!GOOGLE_CALENDAR_ID) {
       return res(500, { success: false, error: "Missing calendar env var" });
@@ -198,13 +196,35 @@ exports.handler = async (event) => {
       });
     }
 
+    // =====================
+    // ONLY CHANGE: ADD REMINDERS HERE
+    // =====================
     const created = await calendar.events.insert({
       calendarId,
       requestBody: {
         summary: title || "Property Showing",
         description: description || "Booked via PropAI",
+
         start: { dateTime: startTime },
         end: { dateTime: endTime },
+
+        reminders: {
+          useDefault: false,
+          overrides: [
+            {
+              method: "email",
+              minutes: 24 * 60,
+            },
+            {
+              method: "email",
+              minutes: 60,
+            },
+            {
+              method: "popup",
+              minutes: 60,
+            },
+          ],
+        },
       },
     });
 
