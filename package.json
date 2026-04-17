@@ -8,7 +8,7 @@
     "build": "echo \"No static build step defined\""
   },
   "dependencies": {
-    "googleapis": "^140.0.0",
+    "googleapis": "^140.0.1",
     "openai": "^6.34.0",
     "resend": "^6.12.0"
   },
