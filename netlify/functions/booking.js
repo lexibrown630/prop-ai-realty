@@ -1,14 +1,11 @@
 const { google } = require("googleapis");
 
 /**
- * 🧠 MULTI-AGENT CALENDAR MAP
- * Add each agent/company calendar here
- * Make sure EACH calendar is shared with your service account
+ * Multi-agent calendar routing
+ * (Right now only 1 real calendar, scalable later)
  */
 const AGENT_CALENDARS = {
-  agent_1: "agent1@group.calendar.google.com",
-  agent_2: "agent2@group.calendar.google.com",
-  company_1: "company1@group.calendar.google.com",
+  agent_1: "50c6100b59b98f15d357622284b567ff017f80155c91097b22c4e9cebb520e8d@group.calendar.google.com",
 };
 
 exports.handler = async (event) => {
@@ -27,7 +24,6 @@ exports.handler = async (event) => {
       GOOGLE_CALENDAR_ID,
     } = process.env;
 
-    // Validate environment variables
     if (
       !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
       !GOOGLE_PRIVATE_KEY ||
@@ -41,7 +37,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Parse request body
     const body = JSON.parse(event.body || "{}");
 
     const {
@@ -52,7 +47,6 @@ exports.handler = async (event) => {
       agentId,
     } = body;
 
-    // Validate required fields
     if (!startTime || !endTime) {
       return {
         statusCode: 400,
@@ -62,7 +56,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Validate agentId if provided
     if (agentId && !AGENT_CALENDARS[agentId]) {
       return {
         statusCode: 400,
@@ -72,11 +65,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // Choose correct calendar
     const calendarId =
       (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
 
-    // Authenticate with Google
     const auth = new google.auth.JWT(
       GOOGLE_SERVICE_ACCOUNT_EMAIL,
       null,
@@ -86,7 +77,6 @@ exports.handler = async (event) => {
 
     const calendar = google.calendar({ version: "v3", auth });
 
-    // Create event
     const response = await calendar.events.insert({
       calendarId,
       requestBody: {
