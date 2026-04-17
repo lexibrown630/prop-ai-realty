@@ -1,18 +1,22 @@
 const { google } = require("googleapis");
 
+const BUFFER_MINUTES = 20; // travel / reset time
+
 const AGENT_CALENDARS = {
-  agent_1:
-    "50c6100b59b98f15d357622284b567ff017f80155c91097b22c4e9cebb520e8d@group.calendar.google.com",
+  agent_1: "50c6100b59b98f15d357622284b567ff017f80155c91097b22c4e9cebb520e8d@group.calendar.google.com",
 };
 
-const BUFFER_MINUTES = 15;
+function addMinutes(date, mins) {
+  return new Date(new Date(date).getTime() + mins * 60000);
+}
+
+function overlaps(aStart, aEnd, bStart, bEnd) {
+  return new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method Not Allowed" }),
-    };
+    return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
   }
 
   try {
@@ -23,68 +27,54 @@ exports.handler = async (event) => {
     } = process.env;
 
     if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Missing env vars" }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: "Missing env vars" }) };
     }
 
     const body = JSON.parse(event.body || "{}");
+    const { action = "book", title, startTime, endTime, agentId, eventId } = body;
 
-    const {
-      action = "book",
-      title,
-      startTime,
-      endTime,
-      description,
-      agentId,
-      eventId,
-      newStartTime,
-      newEndTime,
-      dateRangeStart,
-      dateRangeEnd,
-    } = body;
-
-    const calendarId =
-      (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
-
-    const privateKey = GOOGLE_PRIVATE_KEY.includes("\\n")
-      ? GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
-      : GOOGLE_PRIVATE_KEY;
+    const calendarId = (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
 
     const auth = new google.auth.JWT(
       GOOGLE_SERVICE_ACCOUNT_EMAIL,
       null,
-      privateKey,
+      GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
       ["https://www.googleapis.com/auth/calendar"]
     );
 
     const calendar = google.calendar({ version: "v3", auth });
 
-    // -------------------------------------------------------
-    // 🔵 ACTION: BOOK
-    // -------------------------------------------------------
+    // =========================
+    // 1. FETCH EVENTS (for conflict detection)
+    // =========================
+    const timeMin = new Date(new Date(startTime).getTime() - BUFFER_MINUTES * 60000).toISOString();
+    const timeMax = new Date(new Date(endTime).getTime() + BUFFER_MINUTES * 60000).toISOString();
+
+    const events = await calendar.events.list({
+      calendarId,
+      timeMin,
+      timeMax,
+      singleEvents: true,
+    });
+
+    const items = events.data.items || [];
+
+    // =========================
+    // ACTION: BOOK
+    // =========================
     if (action === "book") {
-      if (!startTime || !endTime) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "Missing time" }),
-        };
-      }
+      const conflict = items.find(ev =>
+        ev.start?.dateTime &&
+        ev.end?.dateTime &&
+        overlaps(startTime, endTime, ev.start.dateTime, ev.end.dateTime)
+      );
 
-      const existing = await calendar.events.list({
-        calendarId,
-        timeMin: startTime,
-        timeMax: endTime,
-        singleEvents: true,
-      });
-
-      if (existing.data.items.length > 0) {
+      if (conflict) {
         return {
-          statusCode: 409,
+          statusCode: 200,
           body: JSON.stringify({
             success: false,
-            error: "Time slot already booked",
+            error: "This time slot is already booked",
           }),
         };
       }
@@ -93,7 +83,7 @@ exports.handler = async (event) => {
         calendarId,
         requestBody: {
           summary: title || "Property Showing",
-          description: description || "Booked via PropAI",
+          description: "Booked via PropAI",
           start: { dateTime: startTime },
           end: { dateTime: endTime },
         },
@@ -103,21 +93,19 @@ exports.handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({
           success: true,
+          message: "Booking confirmed",
           eventId: response.data.id,
           htmlLink: response.data.htmlLink,
         }),
       };
     }
 
-    // -------------------------------------------------------
-    // 🔴 ACTION: CANCEL
-    // -------------------------------------------------------
+    // =========================
+    // ACTION: CANCEL
+    // =========================
     if (action === "cancel") {
       if (!eventId) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "Missing eventId" }),
-        };
+        return { statusCode: 400, body: JSON.stringify({ error: "Missing eventId" }) };
       }
 
       await calendar.events.delete({
@@ -127,32 +115,24 @@ exports.handler = async (event) => {
 
       return {
         statusCode: 200,
-        body: JSON.stringify({
-          success: true,
-          message: "Booking cancelled",
-        }),
+        body: JSON.stringify({ success: true, message: "Booking cancelled" }),
       };
     }
 
-    // -------------------------------------------------------
-    // 🟡 ACTION: RESCHEDULE
-    // -------------------------------------------------------
+    // =========================
+    // ACTION: RESCHEDULE
+    // =========================
     if (action === "reschedule") {
-      if (!eventId || !newStartTime || !newEndTime) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            error: "Missing eventId or new times",
-          }),
-        };
+      if (!eventId) {
+        return { statusCode: 400, body: JSON.stringify({ error: "Missing eventId" }) };
       }
 
       const updated = await calendar.events.patch({
         calendarId,
         eventId,
         requestBody: {
-          start: { dateTime: newStartTime },
-          end: { dateTime: newEndTime },
+          start: { dateTime: startTime },
+          end: { dateTime: endTime },
         },
       });
 
@@ -160,56 +140,33 @@ exports.handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({
           success: true,
-          message: "Rescheduled successfully",
+          message: "Rescheduled",
           eventId: updated.data.id,
         }),
       };
     }
 
-    // -------------------------------------------------------
-    // 🟢 ACTION: SUGGEST TIME SLOTS
-    // -------------------------------------------------------
+    // =========================
+    // ACTION: SUGGEST SLOTS
+    // =========================
     if (action === "suggest") {
-      if (!dateRangeStart || !dateRangeEnd) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            error: "Missing date range",
-          }),
-        };
-      }
+      const base = new Date(startTime);
+      const suggestions = [];
 
-      const existing = await calendar.events.list({
-        calendarId,
-        timeMin: dateRangeStart,
-        timeMax: dateRangeEnd,
-        singleEvents: true,
-        orderBy: "startTime",
-      });
+      for (let i = 0; i < 5; i++) {
+        const start = addMinutes(base, i * 60);
+        const end = addMinutes(start, 30);
 
-      const busy = existing.data.items.map((e) => ({
-        start: new Date(e.start.dateTime).getTime(),
-        end: new Date(e.end.dateTime).getTime(),
-      }));
-
-      const slots = [];
-      const start = new Date(dateRangeStart).getTime();
-      const end = new Date(dateRangeEnd).getTime();
-
-      const SLOT_DURATION = 30 * 60 * 1000;
-      const BUFFER = BUFFER_MINUTES * 60 * 1000;
-
-      for (let t = start; t + SLOT_DURATION <= end; t += SLOT_DURATION) {
-        const conflict = busy.some(
-          (b) =>
-            t < b.end + BUFFER &&
-            t + SLOT_DURATION > b.start - BUFFER
+        const conflict = items.find(ev =>
+          ev.start?.dateTime &&
+          ev.end?.dateTime &&
+          overlaps(start, end, ev.start.dateTime, ev.end.dateTime)
         );
 
         if (!conflict) {
-          slots.push({
-            start: new Date(t).toISOString(),
-            end: new Date(t + SLOT_DURATION).toISOString(),
+          suggestions.push({
+            start: start.toISOString(),
+            end: end.toISOString(),
           });
         }
       }
@@ -218,7 +175,7 @@ exports.handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({
           success: true,
-          availableSlots: slots,
+          suggestions,
         }),
       };
     }
@@ -227,9 +184,8 @@ exports.handler = async (event) => {
       statusCode: 400,
       body: JSON.stringify({ error: "Invalid action" }),
     };
-  } catch (error) {
-    console.error("Booking error:", error);
 
+  } catch (error) {
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
