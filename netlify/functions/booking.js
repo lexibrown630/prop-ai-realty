@@ -1,10 +1,11 @@
-const { google } = require("googleapis");
-const { createClient } = require("@supabase/supabase-js");
+// netlify/functions/booking.js
+import { google } from "googleapis";
+import { createClient } from "@supabase/supabase-js";
 
 const BUFFER_MINUTES = 15;
 
 // =====================
-// SUPABASE (SAAS LOCK)
+// SUPABASE CLIENT
 // =====================
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -15,7 +16,7 @@ const supabase = createClient(
 // CONFIG
 // =====================
 const AGENT_CALENDARS = {
-  agent_1: "50c6100b59b98f15d357622284b567ff017f80155c91097b22c4e9cebb520e8d@group.calendar.google.com",
+  agent_1: process.env.AGENT_1_CALENDAR_ID,
 };
 
 // =====================
@@ -44,9 +45,7 @@ function makeAuth() {
 
   if (!email || !key) throw new Error("Missing Google auth env vars");
 
-  const privateKey = key.includes("\\n")
-    ? key.replace(/\\n/g, "\n")
-    : key;
+  const privateKey = key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
 
   return new google.auth.JWT(email, null, privateKey, [
     "https://www.googleapis.com/auth/calendar",
@@ -56,7 +55,7 @@ function makeAuth() {
 // =====================
 // MAIN HANDLER
 // =====================
-exports.handler = async (event) => {
+export const handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") {
       return res(405, { success: false, error: "Method not allowed" });
@@ -86,7 +85,7 @@ exports.handler = async (event) => {
     const calendarId = getCalendarId(agentId, GOOGLE_CALENDAR_ID);
 
     // =====================
-    // SAAS ACCESS CHECK (FINAL LOCK)
+    // SAAS ACCESS CHECK
     // =====================
     if (action === "book") {
       if (!email) {
@@ -111,16 +110,11 @@ exports.handler = async (event) => {
     // CANCEL
     // =====================
     if (action === "cancel") {
-      if (!eventId) {
-        return res(400, { success: false, error: "Missing eventId" });
-      }
+      if (!eventId) return res(400, { success: false, error: "Missing eventId" });
 
       await calendar.events.delete({ calendarId, eventId });
 
-      return res(200, {
-        success: true,
-        message: "Booking cancelled",
-      });
+      return res(200, { success: true, message: "Booking cancelled" });
     }
 
     // =====================
@@ -134,17 +128,10 @@ exports.handler = async (event) => {
       const updated = await calendar.events.patch({
         calendarId,
         eventId,
-        requestBody: {
-          start: { dateTime: startTime },
-          end: { dateTime: endTime },
-        },
+        requestBody: { start: { dateTime: startTime }, end: { dateTime: endTime } },
       });
 
-      return res(200, {
-        success: true,
-        message: "Rescheduled",
-        eventId: updated.data.id,
-      });
+      return res(200, { success: true, message: "Rescheduled", eventId: updated.data.id });
     }
 
     // =====================
@@ -165,10 +152,8 @@ exports.handler = async (event) => {
 
       const busy = events.data.items || [];
       const suggestions = [];
-
       let cursor = new Date(now);
       cursor.setHours(9, 0, 0, 0);
-
       const STEP_MINUTES = 30;
 
       while (suggestions.length < 6) {
@@ -178,21 +163,10 @@ exports.handler = async (event) => {
         const conflict = busy.some((b) => {
           const bs = new Date(b.start?.dateTime || b.start?.date);
           const be = new Date(b.end?.dateTime || b.end?.date);
-
-          return overlap(
-            applyBuffer(start, -BUFFER_MINUTES),
-            applyBuffer(end, BUFFER_MINUTES),
-            bs,
-            be
-          );
+          return overlap(applyBuffer(start, -BUFFER_MINUTES), applyBuffer(end, BUFFER_MINUTES), bs, be);
         });
 
-        if (!conflict) {
-          suggestions.push({
-            start: start.toISOString(),
-            end: end.toISOString(),
-          });
-        }
+        if (!conflict) suggestions.push({ start: start.toISOString(), end: end.toISOString() });
 
         cursor = new Date(cursor.getTime() + STEP_MINUTES * 60000);
       }
@@ -220,29 +194,18 @@ exports.handler = async (event) => {
     const hasConflict = (events.data.items || []).some((e) => {
       const bs = new Date(e.start?.dateTime || e.start?.date);
       const be = new Date(e.end?.dateTime || e.end?.date);
-
       return overlap(start, end, bs, be);
     });
 
-    if (hasConflict) {
-      return res(409, {
-        success: false,
-        error: "This time slot is already booked",
-      });
-    }
+    if (hasConflict) return res(409, { success: false, error: "This time slot is already booked" });
 
-    // =====================
-    // CREATE EVENT WITH REMINDERS
-    // =====================
     const created = await calendar.events.insert({
       calendarId,
       requestBody: {
         summary: title || "Property Showing",
         description: description || "Booked via PropAI",
-
         start: { dateTime: startTime },
         end: { dateTime: endTime },
-
         reminders: {
           useDefault: false,
           overrides: [
@@ -262,9 +225,6 @@ exports.handler = async (event) => {
       calendarUsed: calendarId,
     });
   } catch (err) {
-    return res(500, {
-      success: false,
-      error: err.message,
-    });
+    return res(500, { success: false, error: err.message });
   }
 };
