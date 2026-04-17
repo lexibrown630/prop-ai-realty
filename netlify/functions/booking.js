@@ -20,33 +20,26 @@ exports.handler = async (event) => {
     } = process.env;
 
     const body = JSON.parse(event.body || "{}");
-    const { title, startTime, endTime, description, agentId } = body;
+    const { title, startTime, endTime, description } = body;
 
     if (!startTime || !endTime) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Missing startTime or endTime" }),
+        body: JSON.stringify({ error: "Missing start or end time" }),
       };
     }
-
-    const calendarId =
-      (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
-
-    const privateKey = GOOGLE_PRIVATE_KEY.includes("\\n")
-      ? GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
-      : GOOGLE_PRIVATE_KEY;
 
     const auth = new google.auth.JWT(
       GOOGLE_SERVICE_ACCOUNT_EMAIL,
       null,
-      privateKey,
+      GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
       ["https://www.googleapis.com/auth/calendar"]
     );
 
     const calendar = google.calendar({ version: "v3", auth });
 
     const response = await calendar.events.insert({
-      calendarId,
+      calendarId: GOOGLE_CALENDAR_ID,
       requestBody: {
         summary: title || "Property Showing",
         description: description || "Booked via PropAI",
@@ -59,16 +52,11 @@ exports.handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        message: "Booking confirmed",
         eventId: response.data.id,
         htmlLink: response.data.htmlLink,
-        calendarUsed: calendarId,
-        agentId: agentId || "default",
       }),
     };
   } catch (error) {
-    console.error("Booking error:", error);
-
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
