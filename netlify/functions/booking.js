@@ -1,7 +1,7 @@
 const { google } = require("googleapis");
 
 const AGENT_CALENDARS = {
-  agent_1: "50c6100b59b98f15d357622284b567ff017f80155c91097b22c4e9cebb520e8d@group.calendar.google.com",
+  agent_1: "50c6100b59b98f15d357622284b567ff017f80155c91 097b22c4e9cebb520e8d@group.calendar.google.com",
 };
 
 exports.handler = async (event) => {
@@ -19,7 +19,11 @@ exports.handler = async (event) => {
       GOOGLE_CALENDAR_ID,
     } = process.env;
 
-    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
+    if (
+      !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+      !GOOGLE_PRIVATE_KEY ||
+      !GOOGLE_CALENDAR_ID
+    ) {
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Missing env vars" }),
@@ -32,7 +36,7 @@ exports.handler = async (event) => {
     if (!startTime || !endTime) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Missing time" }),
+        body: JSON.stringify({ error: "Missing startTime or endTime" }),
       };
     }
 
@@ -52,6 +56,30 @@ exports.handler = async (event) => {
 
     const calendar = google.calendar({ version: "v3", auth });
 
+    // -------------------------------------------------------
+    // 🔴 DOUBLE BOOKING PREVENTION (IMPORTANT PART)
+    // -------------------------------------------------------
+    const existingEvents = await calendar.events.list({
+      calendarId,
+      timeMin: startTime,
+      timeMax: endTime,
+      singleEvents: true,
+      orderBy: "startTime",
+    });
+
+    if (existingEvents.data.items && existingEvents.data.items.length > 0) {
+      return {
+        statusCode: 409,
+        body: JSON.stringify({
+          success: false,
+          error: "This time slot is already booked",
+        }),
+      };
+    }
+
+    // -------------------------------------------------------
+    // ✅ CREATE EVENT (ONLY IF SLOT IS FREE)
+    // -------------------------------------------------------
     const response = await calendar.events.insert({
       calendarId,
       requestBody: {
@@ -73,13 +101,14 @@ exports.handler = async (event) => {
         agentId: agentId || "default",
       }),
     };
-
   } catch (error) {
     console.error("Booking error:", error);
 
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({
+        error: error.message,
+      }),
     };
   }
 };
