@@ -1,38 +1,39 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require("@supabase/supabase-js");
+// netlify/functions/stripeWebhook.js
+import Stripe from "stripe";
+import { buffer } from "micro";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-08-16",
+});
 
-exports.handler = async (event) => {
-  try {
-    const body = JSON.parse(event.body || "{}");
-
-    const session = body.data?.object;
-
-    if (!session?.customer_email) {
-      return { statusCode: 200, body: "No email" };
-    }
-
-    const email = session.customer_email;
-
-    // mark user as active
-    await supabase.from("users").upsert({
-      email,
-      subscription_status: "active",
-      stripe_customer_id: session.customer,
-    });
-
-    return {
-      statusCode: 200,
-      body: "Webhook processed",
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: err.message,
-    };
+export const handler = async (event) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
   }
+
+  const sig = event.headers["stripe-signature"];
+  const buf = await buffer(event);
+  let stripeEvent;
+
+  try {
+    stripeEvent = stripe.webhooks.constructEvent(
+      buf.toString(),
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    return { statusCode: 400, body: `Webhook Error: ${err.message}` };
+  }
+
+  // Handle event types
+  switch (stripeEvent.type) {
+    case "checkout.session.completed":
+      const session = stripeEvent.data.object;
+      console.log("Checkout session completed:", session);
+      break;
+    default:
+      console.log(`Unhandled event type: ${stripeEvent.type}`);
+  }
+
+  return { statusCode: 200, body: "Webhook received" };
 };
