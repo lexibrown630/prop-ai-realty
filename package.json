@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "netlify dev",
-    "build": "echo 'No static build step defined'"
+    "build": "echo 'No static build step defined'",
+    "deploy": "netlify deploy --prod"
   },
   "dependencies": {
     "googleapis": "^140.0.0",
@@ -14,6 +15,6 @@
     "@supabase/supabase-js": "^2.0.0"
   },
   "engines": {
-    "node": ">=18.x"
+    "node": "18.x"
   }
 }
