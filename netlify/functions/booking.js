@@ -22,9 +22,7 @@ exports.handler = async (event) => {
     if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
       return {
         statusCode: 500,
-        body: JSON.stringify({
-          error: "Missing Google environment variables",
-        }),
+        body: JSON.stringify({ error: "Missing env vars" }),
       };
     }
 
@@ -34,7 +32,7 @@ exports.handler = async (event) => {
     if (!startTime || !endTime) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "startTime and endTime are required" }),
+        body: JSON.stringify({ error: "Missing time" }),
       };
     }
 
@@ -76,13 +74,11 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error("Booking function error:", error);
+    console.error("Booking error:", error);
 
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: error.message,
-      }),
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };
