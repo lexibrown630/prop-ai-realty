@@ -19,14 +19,12 @@ exports.handler = async (event) => {
       GOOGLE_CALENDAR_ID,
     } = process.env;
 
-    if (
-      !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !GOOGLE_PRIVATE_KEY ||
-      !GOOGLE_CALENDAR_ID
-    ) {
+    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "Missing env vars" }),
+        body: JSON.stringify({
+          error: "Missing Google environment variables",
+        }),
       };
     }
 
@@ -36,17 +34,21 @@ exports.handler = async (event) => {
     if (!startTime || !endTime) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Missing time" }),
+        body: JSON.stringify({ error: "startTime and endTime are required" }),
       };
     }
 
     const calendarId =
       (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
 
+    const privateKey = GOOGLE_PRIVATE_KEY.includes("\\n")
+      ? GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
+      : GOOGLE_PRIVATE_KEY;
+
     const auth = new google.auth.JWT(
       GOOGLE_SERVICE_ACCOUNT_EMAIL,
       null,
-      GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      privateKey,
       ["https://www.googleapis.com/auth/calendar"]
     );
 
@@ -66,6 +68,7 @@ exports.handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
+        message: "Booking confirmed",
         eventId: response.data.id,
         htmlLink: response.data.htmlLink,
         calendarUsed: calendarId,
@@ -73,9 +76,13 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
+    console.error("Booking function error:", error);
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({
+        error: error.message,
+      }),
     };
   }
 };
