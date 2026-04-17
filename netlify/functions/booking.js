@@ -1,7 +1,18 @@
 const { google } = require("googleapis");
 
+/**
+ * 🧠 MULTI-AGENT CALENDAR MAP
+ * Add each agent/company calendar here
+ * Make sure EACH calendar is shared with your service account
+ */
+const AGENT_CALENDARS = {
+  agent_1: "agent1@group.calendar.google.com",
+  agent_2: "agent2@group.calendar.google.com",
+  company_1: "company1@group.calendar.google.com",
+};
+
 exports.handler = async (event) => {
-  // Only allow POST requests
+  // Only allow POST
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -10,14 +21,13 @@ exports.handler = async (event) => {
   }
 
   try {
-    // ENV VARIABLES (your current setup)
     const {
       GOOGLE_SERVICE_ACCOUNT_EMAIL,
       GOOGLE_PRIVATE_KEY,
       GOOGLE_CALENDAR_ID,
     } = process.env;
 
-    // Validate env vars
+    // Validate environment variables
     if (
       !GOOGLE_SERVICE_ACCOUNT_EMAIL ||
       !GOOGLE_PRIVATE_KEY ||
@@ -31,7 +41,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Parse request body safely
+    // Parse request body
     const body = JSON.parse(event.body || "{}");
 
     const {
@@ -39,7 +49,7 @@ exports.handler = async (event) => {
       startTime,
       endTime,
       description,
-      agentEmail, // future multi-agent support
+      agentId,
     } = body;
 
     // Validate required fields
@@ -52,7 +62,21 @@ exports.handler = async (event) => {
       };
     }
 
-    // Auth with Google
+    // Validate agentId if provided
+    if (agentId && !AGENT_CALENDARS[agentId]) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: "Invalid agentId",
+        }),
+      };
+    }
+
+    // Choose correct calendar
+    const calendarId =
+      (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
+
+    // Authenticate with Google
     const auth = new google.auth.JWT(
       GOOGLE_SERVICE_ACCOUNT_EMAIL,
       null,
@@ -61,9 +85,6 @@ exports.handler = async (event) => {
     );
 
     const calendar = google.calendar({ version: "v3", auth });
-
-    // Choose calendar (future multi-agent support hook)
-    const calendarId = GOOGLE_CALENDAR_ID;
 
     // Create event
     const response = await calendar.events.insert({
@@ -85,6 +106,8 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: true,
         message: "Booking confirmed",
+        agentId: agentId || "default",
+        calendarUsed: calendarId,
         eventId: response.data.id,
         htmlLink: response.data.htmlLink,
       }),
