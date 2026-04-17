@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "netlify dev",
-    "build": "echo 'No static build step defined'"
+    "build": "echo \"No static build step defined\""
   },
   "dependencies": {
     "googleapis": "^140.0.0",
