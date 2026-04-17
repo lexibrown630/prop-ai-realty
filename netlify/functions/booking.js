@@ -1,6 +1,15 @@
 const { google } = require("googleapis");
+const { createClient } = require("@supabase/supabase-js");
 
 const BUFFER_MINUTES = 15;
+
+// =====================
+// SUPABASE (SAAS LOCK)
+// =====================
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // =====================
 // CONFIG
@@ -62,6 +71,7 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
 
     const {
+      email,
       action = "book",
       title,
       startTime,
@@ -74,6 +84,28 @@ exports.handler = async (event) => {
     const auth = makeAuth();
     const calendar = google.calendar({ version: "v3", auth });
     const calendarId = getCalendarId(agentId, GOOGLE_CALENDAR_ID);
+
+    // =====================
+    // SAAS ACCESS CHECK (FINAL LOCK)
+    // =====================
+    if (action === "book") {
+      if (!email) {
+        return res(400, { success: false, error: "Missing email" });
+      }
+
+      const { data } = await supabase
+        .from("users")
+        .select("subscription_status")
+        .eq("email", email)
+        .single();
+
+      if (!data || data.subscription_status !== "active") {
+        return res(403, {
+          success: false,
+          error: "Payment required to access booking system",
+        });
+      }
+    }
 
     // =====================
     // CANCEL
@@ -214,18 +246,9 @@ exports.handler = async (event) => {
         reminders: {
           useDefault: false,
           overrides: [
-            {
-              method: "email",
-              minutes: 24 * 60,
-            },
-            {
-              method: "email",
-              minutes: 60,
-            },
-            {
-              method: "popup",
-              minutes: 60,
-            },
+            { method: "email", minutes: 24 * 60 },
+            { method: "email", minutes: 60 },
+            { method: "popup", minutes: 60 },
           ],
         },
       },
