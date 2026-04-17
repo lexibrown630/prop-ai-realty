@@ -2,43 +2,64 @@ const { google } = require("googleapis");
 
 const BUFFER_MINUTES = 15;
 
+// =====================
+// CONFIG
+// =====================
 const AGENT_CALENDARS = {
   agent_1: "50c6100b59b98f15d357622284b567ff017f80155c91097b22c4e9cebb520e8d@group.calendar.google.com",
 };
 
-const TIMEZONE = "America/New_York";
+// =====================
+// HELPERS
+// =====================
+const res = (statusCode, body) => ({
+  statusCode,
+  body: JSON.stringify(body),
+});
 
 const toDate = (t) => new Date(t);
 
-function res(statusCode, body) {
-  return {
-    statusCode,
-    body: JSON.stringify(body),
-  };
+const overlap = (aStart, aEnd, bStart, bEnd) =>
+  aStart < bEnd && bStart < aEnd;
+
+const applyBuffer = (date, minutes) =>
+  new Date(date.getTime() + minutes * 60000);
+
+function getCalendarId(agentId, fallback) {
+  return (agentId && AGENT_CALENDARS[agentId]) || fallback;
 }
 
-function isOverlapping(startA, endA, startB, endB) {
-  return startA < endB && startB < endA;
+function makeAuth() {
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key = process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!email || !key) throw new Error("Missing Google auth env vars");
+
+  const privateKey = key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
+
+  return new google.auth.JWT(email, null, privateKey, [
+    "https://www.googleapis.com/auth/calendar",
+  ]);
 }
 
+// =====================
+// MAIN HANDLER
+// =====================
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return res(405, { success: false, error: "Method Not Allowed" });
-  }
-
   try {
+    if (event.httpMethod !== "POST") {
+      return res(405, { success: false, error: "Method not allowed" });
+    }
+
     const {
-      GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      GOOGLE_PRIVATE_KEY,
       GOOGLE_CALENDAR_ID,
     } = process.env;
 
-    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
-      return res(500, { success: false, error: "Missing env vars" });
+    if (!GOOGLE_CALENDAR_ID) {
+      return res(500, { success: false, error: "Missing calendar env var" });
     }
 
     const body = JSON.parse(event.body || "{}");
-
     const {
       action = "book",
       title,
@@ -49,27 +70,17 @@ exports.handler = async (event) => {
       eventId,
     } = body;
 
-    const privateKey = GOOGLE_PRIVATE_KEY.includes("\\n")
-      ? GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
-      : GOOGLE_PRIVATE_KEY;
-
-    const auth = new google.auth.JWT(
-      GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      null,
-      privateKey,
-      ["https://www.googleapis.com/auth/calendar"]
-    );
-
-    const calendarId =
-      (agentId && AGENT_CALENDARS[agentId]) || GOOGLE_CALENDAR_ID;
-
+    const auth = makeAuth();
     const calendar = google.calendar({ version: "v3", auth });
+    const calendarId = getCalendarId(agentId, GOOGLE_CALENDAR_ID);
 
-    // =========================
+    // =====================
     // CANCEL
-    // =========================
+    // =====================
     if (action === "cancel") {
-      if (!eventId) return res(400, { success: false, error: "Missing eventId" });
+      if (!eventId) {
+        return res(400, { success: false, error: "Missing eventId" });
+      }
 
       await calendar.events.delete({ calendarId, eventId });
 
@@ -79,9 +90,9 @@ exports.handler = async (event) => {
       });
     }
 
-    // =========================
+    // =====================
     // RESCHEDULE
-    // =========================
+    // =====================
     if (action === "reschedule") {
       if (!eventId || !startTime || !endTime) {
         return res(400, { success: false, error: "Missing fields" });
@@ -103,22 +114,17 @@ exports.handler = async (event) => {
       });
     }
 
-    // =========================
+    // =====================
     // SUGGEST SLOTS
-    // =========================
+    // =====================
     if (action === "suggest") {
       const now = new Date();
-
-      const startWindow = new Date(now);
-      startWindow.setHours(9, 0, 0, 0);
-
-      const endWindow = new Date(now);
-      endWindow.setDate(endWindow.getDate() + 3);
-      endWindow.setHours(18, 0, 0, 0);
+      const endWindow = new Date();
+      endWindow.setDate(now.getDate() + 3);
 
       const events = await calendar.events.list({
         calendarId,
-        timeMin: startWindow.toISOString(),
+        timeMin: now.toISOString(),
         timeMax: endWindow.toISOString(),
         singleEvents: true,
         orderBy: "startTime",
@@ -127,28 +133,24 @@ exports.handler = async (event) => {
       const busy = events.data.items || [];
       const suggestions = [];
 
-      const stepMinutes = 30;
-      let cursor = new Date(startWindow);
-      let safety = 0;
+      let cursor = new Date(now);
+      cursor.setHours(9, 0, 0, 0);
 
-      while (suggestions.length < 6 && safety < 500) {
-        safety++;
+      const STEP_MINUTES = 30;
 
+      while (suggestions.length < 6) {
         const start = new Date(cursor);
-        const end = new Date(start.getTime() + stepMinutes * 60000);
-
-        if (start < now) {
-          cursor = new Date(cursor.getTime() + stepMinutes * 60000);
-          continue;
-        }
+        const end = new Date(start.getTime() + STEP_MINUTES * 60000);
 
         const conflict = busy.some((b) => {
-          const bs = new Date(b.start.dateTime || b.start.date);
-          const be = new Date(b.end.dateTime || b.end.date);
+          const bs = new Date(b.start?.dateTime || b.start?.date);
+          const be = new Date(b.end?.dateTime || b.end?.date);
 
-          return (
-            start < new Date(be.getTime() + BUFFER_MINUTES * 60000) &&
-            new Date(bs.getTime() - BUFFER_MINUTES * 60000) < end
+          return overlap(
+            applyBuffer(start, -BUFFER_MINUTES),
+            applyBuffer(end, BUFFER_MINUTES),
+            bs,
+            be
           );
         });
 
@@ -156,27 +158,18 @@ exports.handler = async (event) => {
           suggestions.push({
             start: start.toISOString(),
             end: end.toISOString(),
-            label: start.toLocaleString("en-US", {
-              weekday: "short",
-              hour: "numeric",
-              minute: "2-digit",
-              timeZone: TIMEZONE,
-            }),
           });
         }
 
-        cursor = new Date(cursor.getTime() + stepMinutes * 60000);
+        cursor = new Date(cursor.getTime() + STEP_MINUTES * 60000);
       }
 
-      return res(200, {
-        success: true,
-        suggestions,
-      });
+      return res(200, { success: true, suggestions });
     }
 
-    // =========================
+    // =====================
     // BOOK (DEFAULT)
-    // =========================
+    // =====================
     if (!startTime || !endTime) {
       return res(400, { success: false, error: "Missing time" });
     }
@@ -186,26 +179,26 @@ exports.handler = async (event) => {
 
     const events = await calendar.events.list({
       calendarId,
-      timeMin: new Date(start.getTime() - BUFFER_MINUTES * 60000).toISOString(),
-      timeMax: new Date(end.getTime() + BUFFER_MINUTES * 60000).toISOString(),
+      timeMin: applyBuffer(start, -BUFFER_MINUTES).toISOString(),
+      timeMax: applyBuffer(end, BUFFER_MINUTES).toISOString(),
       singleEvents: true,
     });
 
     const hasConflict = (events.data.items || []).some((e) => {
-      const bs = new Date(e.start.dateTime || e.start.date);
-      const be = new Date(e.end.dateTime || e.end.date);
+      const bs = new Date(e.start?.dateTime || e.start?.date);
+      const be = new Date(e.end?.dateTime || e.end?.date);
 
-      return isOverlapping(start, end, bs, be);
+      return overlap(start, end, bs, be);
     });
 
     if (hasConflict) {
-      return res(200, {
+      return res(409, {
         success: false,
         error: "This time slot is already booked",
       });
     }
 
-    const response = await calendar.events.insert({
+    const created = await calendar.events.insert({
       calendarId,
       requestBody: {
         summary: title || "Property Showing",
@@ -218,11 +211,10 @@ exports.handler = async (event) => {
     return res(200, {
       success: true,
       message: "Booking confirmed",
-      eventId: response.data.id,
-      htmlLink: response.data.htmlLink,
+      eventId: created.data.id,
+      htmlLink: created.data.htmlLink,
       calendarUsed: calendarId,
     });
-
   } catch (err) {
     return res(500, {
       success: false,
