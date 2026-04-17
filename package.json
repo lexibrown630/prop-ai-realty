@@ -4,16 +4,15 @@
   "description": "PropAI real estate automation platform with AI chat, listings, and booking automation",
   "main": "index.js",
   "scripts": {
-    "start": "netlify dev",
-    "build": "netlify build"
+    "start": "netlify dev"
   },
   "dependencies": {
     "googleapis": "^140.0.0",
     "openai": "^6.34.0",
-    "@supabase/supabase-js": "^2.39.0",
-    "stripe": "^12.18.0"
+    "stripe": "^12.0.0",
+    "@supabase/supabase-js": "^2.0.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18 <25"
   }
 }
