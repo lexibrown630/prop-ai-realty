@@ -9,71 +9,40 @@
 
   <h1>Unlock PropAI Booking System</h1>
 
-  <p style="color: #555;">
-    Choose a plan to access automated property scheduling and reminders.
-  </p>
+  <p>Choose a plan to activate your account.</p>
 
   <hr>
 
-  <!-- STARTER -->
-  <div style="margin-bottom: 30px;">
-    <h2>Starter — $79/month</h2>
-    <p>Basic booking access for individual agents.</p>
-    <button onclick="subscribe('price_1TN45MRqy7IFyseNJtzPtgVC')">
-      Start Starter Plan
-    </button>
-  </div>
+  <h2>Starter — $79/month</h2>
+  <button onclick="subscribe('price_1TN45MRqy7IFyseNJtzPtgVC')">Subscribe</button>
 
   <hr>
 
-  <!-- PRO -->
-  <div style="margin-bottom: 30px;">
-    <h2>Pro — $149/month</h2>
-    <p>For growing agents handling multiple listings.</p>
-    <button onclick="subscribe('price_1TN46TRqy7IFyseNHEiBa8xe')">
-      Start Pro Plan
-    </button>
-  </div>
+  <h2>Pro — $149/month</h2>
+  <button onclick="subscribe('price_1TN46TRqy7IFyseNHEiBa8xe')">Subscribe</button>
 
   <hr>
 
-  <!-- AGENCY -->
-  <div style="margin-bottom: 30px;">
-    <h2>Agency — $389/month</h2>
-    <p>Full automation for teams & brokerages.</p>
-    <button onclick="subscribe('price_1TN47TRqy7IFyseNqnUSkEoO')">
-      Start Agency Plan
-    </button>
-  </div>
+  <h2>Agency — $389/month</h2>
+  <button onclick="subscribe('price_1TN47TRqy7IFyseNqnUSkEoO')">Subscribe</button>
 
   <script>
     async function subscribe(priceId) {
-      try {
-        const email = prompt("Enter your email to continue:");
+      const email = prompt("Enter your email:");
+      if (!email) return;
 
-        if (!email) return;
+      const res = await fetch("/.netlify/functions/createCheckout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, email })
+      });
 
-        const res = await fetch("/.netlify/functions/createCheckout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            priceId,
-            email
-          })
-        });
+      const data = await res.json();
 
-        const data = await res.json();
-
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          alert("Checkout failed. Try again.");
-        }
-
-      } catch (err) {
-        alert("Error: " + err.message);
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Checkout failed");
       }
     }
   </script>
