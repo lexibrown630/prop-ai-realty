@@ -1,5 +1,15 @@
 {
+  "name": "prop-ai-realty",
+  "version": "1.0.0",
+  "description": "PropAI real estate automation platform with AI chat, listings, and booking automation",
+  "main": "index.js",
+  "scripts": {
+    "start": "netlify dev"
+  },
   "dependencies": {
-    "openai": "^4.0.0"
+    "googleapis": "^140.0.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
