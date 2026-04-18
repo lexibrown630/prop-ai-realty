@@ -1,39 +1,58 @@
-// netlify/functions/stripeWebhook.js
 import Stripe from "stripe";
-import { buffer } from "micro";
+import nodemailer from "nodemailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-08-16",
 });
 
-export const handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
 
-  const sig = event.headers["stripe-signature"];
-  const buf = await buffer(event);
+const sendConfirmationEmail = async (toEmail, bookingDetails) => {
+  const mailOptions = {
+    from: `"PropAI Bookings" <${process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: "Your Booking is Confirmed!",
+    text: `Hi!\n\nYour booking is confirmed:\n${bookingDetails}`,
+    html: `<p>Hi!</p><p>Your booking is confirmed:</p><pre>${bookingDetails}</pre>`,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+export async function handler(event) {
+  if (event.httpMethod !== "POST") return { statusCode: 405 };
+
   let stripeEvent;
-
   try {
-    stripeEvent = stripe.webhooks.constructEvent(
-      buf.toString(),
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    stripeEvent = JSON.parse(event.body);
   } catch (err) {
     return { statusCode: 400, body: `Webhook Error: ${err.message}` };
   }
 
-  // Handle event types
-  switch (stripeEvent.type) {
-    case "checkout.session.completed":
-      const session = stripeEvent.data.object;
-      console.log("Checkout session completed:", session);
-      break;
-    default:
-      console.log(`Unhandled event type: ${stripeEvent.type}`);
+  if (stripeEvent.type === "checkout.session.completed") {
+    const session = stripeEvent.data.object;
+
+    // Extract your customer info
+    const customerEmail = session.customer_details.email;
+    const bookingDetails = `
+Booking ID: ${session.id}
+Amount: $${session.amount_total / 100}
+Date: ${new Date(session.created * 1000).toLocaleString()}
+`;
+
+    try {
+      await sendConfirmationEmail(customerEmail, bookingDetails);
+      console.log("Confirmation email sent to:", customerEmail);
+    } catch (err) {
+      console.error("Failed to send email:", err);
+    }
   }
 
   return { statusCode: 200, body: "Webhook received" };
-};
+}
