@@ -3,29 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>PropAI Dashboard</title>
+<title>PropAI</title>
 
 <style>
 body {
   margin: 0;
   font-family: Arial;
-  background: #f5f5f5;
-}
-
-/* NAV */
-nav {
   background: #0D1B2A;
   color: white;
-  padding: 15px;
+}
+
+.nav {
   display: flex;
-  gap: 10px;
+  background: #08121c;
 }
 
 .nav-tab {
+  padding: 15px 20px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 5px;
 }
 
 .nav-tab.active {
@@ -33,7 +28,6 @@ nav {
   color: black;
 }
 
-/* PANELS */
 .panel {
   display: none;
   padding: 20px;
@@ -43,50 +37,45 @@ nav {
   display: block;
 }
 
-/* CHAT */
-#chat-messages {
-  height: 300px;
-  overflow-y: auto;
-  background: white;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-
-.msg {
-  margin-bottom: 10px;
-}
-
-.user {
-  text-align: right;
-}
-
-.bot {
-  text-align: left;
-}
-
-/* INPUTS */
-input, textarea {
+input, textarea, select {
   width: 100%;
   padding: 10px;
-  margin-bottom: 10px;
+  margin: 10px 0;
 }
 
 button {
-  padding: 10px;
   background: #C9A84C;
   border: none;
+  padding: 10px;
   cursor: pointer;
   width: 100%;
 }
 
-/* RESULT BOXES */
-.result {
+#chat-messages {
+  height: 300px;
+  overflow-y: auto;
   background: white;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 15px;
-  white-space: pre-wrap;
+  color: black;
+  padding: 10px;
+}
+
+.msg {
+  margin: 5px 0;
+}
+
+.user { text-align: right; }
+.bot { text-align: left; }
+
+.result-box {
+  background: white;
+  color: black;
+  padding: 10px;
+  margin-top: 10px;
+  display: none;
+}
+
+.result-box.visible {
+  display: block;
 }
 </style>
 </head>
@@ -94,120 +83,114 @@ button {
 <body>
 
 <!-- NAV -->
-<nav>
+<div class="nav">
   <div class="nav-tab active" onclick="showPanel('tools')">Chat</div>
   <div class="nav-tab" onclick="showPanel('followup')">Follow-Up</div>
   <div class="nav-tab" onclick="showPanel('listing')">Listings</div>
   <div class="nav-tab" onclick="showPanel('booking')">Booking</div>
-</nav>
+</div>
 
-<!-- ================= CHAT ================= -->
+<!-- CHAT -->
 <div id="panel-tools" class="panel active">
-  <h2>AI Assistant</h2>
+  <h2>AI Chat</h2>
 
   <div id="chat-messages"></div>
 
-  <input id="chat-input" placeholder="Ask about properties or book a showing..." />
+  <input id="chat-input" placeholder="Ask about a property...">
   <button onclick="sendChat()">Send</button>
 </div>
 
-<!-- ================= FOLLOW-UP ================= -->
+<!-- FOLLOW UP -->
 <div id="panel-followup" class="panel">
   <h2>Follow-Up Generator</h2>
 
   <input id="lead-name" placeholder="Client Name">
   <input id="lead-contact" placeholder="Email or Phone">
-  <input id="lead-source" placeholder="Lead Source (Zillow, Website)">
+  <input id="lead-source" placeholder="Zillow, Website, etc">
   <input id="lead-type" placeholder="Buyer / Seller">
   <textarea id="lead-notes" placeholder="Notes"></textarea>
 
-  <button id="followup-btn" onclick="generateFollowUp()">Generate Follow-Up</button>
+  <button id="followup-btn" onclick="generateFollowUp()">Generate</button>
 
-  <div class="result">
-    <strong>Email:</strong>
+  <div id="email-result" class="result-box">
+    <h3>Email</h3>
     <div id="email-content"></div>
   </div>
 
-  <div class="result">
-    <strong>SMS:</strong>
+  <div id="sms-result" class="result-box">
+    <h3>SMS</h3>
     <div id="sms-content"></div>
   </div>
 </div>
 
-<!-- ================= LISTINGS ================= -->
+<!-- LISTING -->
 <div id="panel-listing" class="panel">
   <h2>Listing Generator</h2>
 
   <input id="prop-address" placeholder="Address">
   <input id="prop-beds" placeholder="Beds/Baths">
-  <input id="prop-sqft" placeholder="Square Feet">
+  <input id="prop-sqft" placeholder="Sqft">
   <input id="prop-price" placeholder="Price">
   <input id="prop-year" placeholder="Year Built">
-  <input id="prop-features" placeholder="Key Features">
-  <input id="prop-tone" placeholder="Tone (Luxury, Casual, etc)">
+  <textarea id="prop-features" placeholder="Features"></textarea>
 
-  <button id="listing-btn" onclick="generateListing()">Generate Listing</button>
+  <button id="listing-btn" onclick="generateListing()">Generate</button>
 
-  <div class="result">
+  <div id="listing-result" class="result-box">
     <div id="listing-content"></div>
   </div>
 </div>
 
-<!-- ================= BOOKING ================= -->
+<!-- BOOKING -->
 <div id="panel-booking" class="panel">
-  <h2>Book a Showing</h2>
+  <h2>Booking</h2>
 
   <button onclick="getSlots()">Get Available Times</button>
 
-  <div id="slots" style="margin-top:15px;"></div>
+  <div id="slots"></div>
+
+  <div id="booking-confirm" class="result-box">
+    <button onclick="confirmBooking()">Confirm Booking</button>
+  </div>
 </div>
 
-<!-- ================= CONNECT SCRIPT ================= -->
+<!-- SCRIPT CONNECTS EVERYTHING -->
 <script src="/script.js"></script>
 
 <script>
-/* ================= BOOKING ================= */
-
+/* BOOKING CONNECTION */
 async function getSlots() {
   const res = await fetch('/.netlify/functions/booking', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: "suggest" })
+    body: JSON.stringify({ action: 'suggest' })
   });
 
   const data = await res.json();
+
   const container = document.getElementById('slots');
-  container.innerHTML = "";
+  container.innerHTML = '';
 
-  if (!data.suggestions) {
-    container.innerText = "No availability found";
-    return;
-  }
-
-  data.suggestions.forEach(slot => {
+  data.suggestions.forEach(s => {
     const btn = document.createElement('button');
-    const time = new Date(slot.start).toLocaleString();
-
-    btn.innerText = time;
-
-    btn.onclick = async () => {
-      await fetch('/.netlify/functions/booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: "book",
-          startTime: slot.start,
-          endTime: slot.end,
-          title: "Property Showing",
-          email: "test@test.com" // can replace later
-        })
-      });
-
-      alert("Booking confirmed");
-    };
-
+    btn.innerText = new Date(s.start).toLocaleString();
+    btn.onclick = () => selectSlot(btn, btn.innerText);
     container.appendChild(btn);
   });
+}
+
+async function confirmBooking() {
+  const res = await fetch('/.netlify/functions/booking', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'book',
+      startTime: new Date().toISOString(),
+      endTime: new Date(Date.now()+30*60000).toISOString(),
+      email: "test@test.com"
+    })
+  });
+
+  const data = await res.json();
+  alert(data.message || data.error);
 }
 </script>
 
