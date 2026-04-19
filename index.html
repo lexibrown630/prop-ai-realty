@@ -12,14 +12,28 @@ body {
   text-align: center;
   padding: 40px;
 }
+
+#box {
+  max-width: 500px;
+  margin: auto;
+}
+
+button {
+  padding: 10px 16px;
+  margin-top: 20px;
+  cursor: pointer;
+}
 </style>
 </head>
 
 <body>
 
-<h1>Dashboard</h1>
-<p id="status">Checking login...</p>
-<button onclick="logout()">Logout</button>
+<div id="box">
+  <h1>Dashboard</h1>
+  <p id="status">Checking login...</p>
+
+  <button onclick="logout()">Logout</button>
+</div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
@@ -30,46 +44,73 @@ const supabase = createClient(
 );
 
 async function checkAccess() {
-  const { data: { session } } = await supabase.auth.getSession();
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  // ❌ NOT LOGGED IN → go to login
-  if (!session) {
-    document.getElementById("status").innerText = "Not logged in → redirecting...";
-    window.location.href = "/src/login.html";
-    return;
+    if (sessionError) {
+      document.getElementById("status").innerText = "Session error";
+      console.log(sessionError);
+      return;
+    }
+
+    // ❌ NOT LOGGED IN
+    if (!session) {
+      document.getElementById("status").innerText = "Not logged in → redirecting...";
+      setTimeout(() => {
+        window.location.href = "/src/login.html";
+      }, 1500);
+      return;
+    }
+
+    const email = session.user.email;
+    document.getElementById("status").innerText = "Logged in as: " + email;
+
+    // 🔍 GET USER FROM DB
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email);
+
+    console.log("DB DATA:", data);
+    console.log("DB ERROR:", error);
+
+    const user = data && data[0];
+
+    // ❌ USER NOT FOUND
+    if (!user) {
+      document.getElementById("status").innerText =
+        "❌ No user found in database → going to billing";
+
+      setTimeout(() => {
+        window.location.href = "/src/payments.html";
+      }, 2000);
+
+      return;
+    }
+
+    // ❌ NOT ACTIVE
+    if (user.subscription_status !== "active") {
+      document.getElementById("status").innerText =
+        "❌ Subscription inactive → going to billing";
+
+      setTimeout(() => {
+        window.location.href = "/src/payments.html";
+      }, 2000);
+
+      return;
+    }
+
+    // ✅ SUCCESS
+    document.getElementById("status").innerText =
+      "✅ Logged in successfully | Plan: " + user.plan;
+
+  } catch (err) {
+    console.log("FATAL ERROR:", err);
+    document.getElementById("status").innerText = "Something broke — check console";
   }
-
-  const email = session.user.email;
-  document.getElementById("status").innerText = "Logged in as: " + email;
-
-  // 🔍 Check DB
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email);
-
-  const user = data && data[0];
-
-  // ❌ No user → go to billing
-  if (!user) {
-    document.getElementById("status").innerText = "No user found → billing";
-    window.location.href = "/src/payments.html";
-    return;
-  }
-
-  // ❌ Not active → billing
-  if (user.subscription_status !== "active") {
-    document.getElementById("status").innerText = "Not subscribed → billing";
-    window.location.href = "/src/payments.html";
-    return;
-  }
-
-  // ✅ SUCCESS
-  document.getElementById("status").innerText =
-    "✅ Logged in | Plan: " + user.plan;
 }
 
-// logout
+// LOGOUT
 window.logout = async () => {
   await supabase.auth.signOut();
   window.location.href = "/src/login.html";
