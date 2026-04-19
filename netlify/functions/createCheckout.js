@@ -55,7 +55,7 @@ exports.handler = async (event) => {
       },
 
       success_url: "https://prop-ai-realty.netlify.app/index.html?success=true",
-      cancel_url: "https://prop-ai-realty.netlify.app/src/payments.html?canceled=true",
+      cancel_url: "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
     });
 
     console.log("✅ Session created:", session.id);
