@@ -1,15 +1,6 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-08-16",
-});
-
-// 🔥 ADMIN ACCESS TO SUPABASE
-const supabase = createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function handler(event) {
   if (event.httpMethod !== "POST") {
@@ -23,33 +14,39 @@ export async function handler(event) {
   } catch (err) {
     return {
       statusCode: 400,
-      body: `Webhook Error: ${err.message}`,
+      body: "Invalid JSON",
     };
   }
 
-  // ✅ PAYMENT SUCCESS
+  // 🔥 ONLY HANDLE SUCCESSFUL PAYMENTS
   if (stripeEvent.type === "checkout.session.completed") {
     const session = stripeEvent.data.object;
 
     const email = session.customer_email;
-    const plan = session.metadata?.plan || "starter";
+    const plan = session.metadata.plan;
 
     console.log("💰 PAYMENT SUCCESS:", email, plan);
 
-    // 🔥 UPDATE USER IN SUPABASE
-    const { error } = await supabase
-      .from("users")
-      .update({
-        subscription_status: "active",
-        plan: plan,
-      })
-      .eq("email", email);
+    // 🔥 UPDATE SUPABASE
+    const res = await fetch(
+      "https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users?email=eq." + email,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subscription_status: "active",
+          plan: plan,
+        }),
+      }
+    );
 
-    if (error) {
-      console.error("❌ Supabase update failed:", error);
-    } else {
-      console.log("✅ User updated successfully");
-    }
+    const text = await res.text();
+
+    console.log("🧾 Supabase response:", text);
   }
 
   return {
