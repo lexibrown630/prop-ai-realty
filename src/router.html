@@ -1,72 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Routing - PropAI Realty</title>
-</head>
-<body>
-  <h2 id="status">Logging you in...</h2>
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
 
-    const supabase = createClient(
-      "https://jrmqdojsxjtkjpczaysp.supabase.co",
-      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-    );
+// ONLY run routing if user is already logged in
+async function routeUser() {
+  const { data: { user } } = await supabase.auth.getUser();
 
-    const status = document.getElementById("status");
+  // ❌ NOT logged in → STOP (stay on login page)
+  if (!user) {
+    console.log("No user — staying on login page");
+    return;
+  }
 
-    async function handleLogin() {
-      // ✅ CRITICAL: process magic link tokens from URL
-      const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+  const email = user.email;
 
-      if (error) {
-        console.error("Exchange error:", error);
-        status.textContent = "❌ Login link expired or invalid. Try again.";
-        return;
-      }
+  console.log("User detected:", email);
 
-      // Now get session AFTER exchange
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData.session;
+  // 🔐 Check access
+  const res = await fetch("/.netlify/functions/checkAccess", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
 
-      if (!session) {
-        status.textContent = "❌ No session found. Redirecting...";
-        setTimeout(() => {
-          window.location.href = "/src/login.html";
-        }, 2000);
-        return;
-      }
+  const data = await res.json();
 
-      const email = session.user.email;
-      console.log("Logged in:", email);
+  // ❌ Not paid → go to payments
+  if (!data.access) {
+    window.location.href = "/src/payments.html";
+    return;
+  }
 
-      status.textContent = "✅ Logged in! Checking access...";
+  // ✅ Paid → dashboard
+  window.location.href = "/index.html";
+}
 
-      // 🔐 Check access
-      const res = await fetch("/.netlify/functions/checkAccess", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email })
-      });
-
-      const result = await res.json();
-
-      if (!result.access) {
-        status.textContent = "➡️ Redirecting to payment...";
-        window.location.href = "/src/payments.html";
-        return;
-      }
-
-      // ✅ SUCCESS
-      status.textContent = "🚀 Redirecting to dashboard...";
-      window.location.href = "/index.html";
-    }
-
-    handleLogin();
-  </script>
-</body>
-</html>
+// ⛔ IMPORTANT: DO NOT auto-run immediately
+// Wait until page is ready
+window.addEventListener("load", routeUser);
