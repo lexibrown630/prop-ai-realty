@@ -1,49 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Choose Your Plan</title>
+  <title>Choose Plan</title>
 </head>
 <body>
-
   <h1>Choose your plan</h1>
 
-  <ul>
-    <li>Starter - $79.99/month</li>
-    <li>Agency - $149.99/month</li>
-    <li>Pro - $349.99/month</li>
-  </ul>
+  <button onclick="goToCheckout('price_123')">
+    Starter - $79.99/month
+  </button>
 
-  <button id="checkout-btn">Go to Checkout</button>
+  <button onclick="goToCheckout('price_456')">
+    Agency - $149.99/month
+  </button>
 
-  <p id="status"></p>
+  <button onclick="goToCheckout('price_789')">
+    Pro - $349.99/month
+  </button>
 
-  <script>
-    const btn = document.getElementById("checkout-btn");
-    const status = document.getElementById("status");
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    btn.addEventListener("click", async () => {
-      status.textContent = "Redirecting to checkout...";
+    const supabase = createClient(
+      "https://jrmqdojsxjtkjpczaysp.supabase.co",
+      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+    );
 
-      try {
-        const res = await fetch("/.netlify/functions/createCheckout", {
-          method: "POST",
-        });
+    window.goToCheckout = async (priceId) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        const data = await res.json();
-
-        if (data.url) {
-          window.location.href = data.url; // 🔑 REDIRECT TO STRIPE
-        } else {
-          status.textContent = "❌ No checkout URL returned";
-        }
-
-      } catch (err) {
-        console.error(err);
-        status.textContent = "❌ Error starting checkout";
+      if (!user) {
+        alert("You must be logged in first");
+        return;
       }
-    });
-  </script>
 
+      console.log("User:", user.email);
+
+      const res = await fetch("/.netlify/functions/createCheckout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          priceId: priceId,
+          email: user.email,
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log("Checkout response:", data);
+
+      if (!data.url) {
+        alert("❌ No checkout URL returned");
+        return;
+      }
+
+      window.location.href = data.url;
+    };
+  </script>
 </body>
 </html>
