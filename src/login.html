@@ -8,7 +8,8 @@
   <h1>Login to PropAI Realty</h1>
 
   <form id="login-form">
-    <label>Email: 
+    <label>
+      Email:
       <input type="email" id="email" required>
     </label>
     <button type="submit">Send Magic Link</button>
@@ -16,7 +17,15 @@
 
   <p id="status"></p>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    // Supabase config
+    const supabase = createClient(
+      "https://jrmqdojsxjtkjpczaysp.supabase.co",
+      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+    );
+
     const form = document.getElementById("login-form");
     const status = document.getElementById("status");
 
@@ -25,31 +34,20 @@
 
       const email = document.getElementById("email").value;
 
-      status.textContent = "Sending email...";
+      status.textContent = "Sending magic link...";
 
-      try {
-        const res = await fetch("/.netlify/functions/sendEmail", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            toEmail: email,
-            bookingDetails: "Login magic link request",
-          }),
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          status.textContent = "✅ Email sent!";
-        } else {
-          status.textContent = "❌ Failed: " + data.error;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: "https://prop-ai-realty.netlify.app/src/router.html"
         }
+      });
 
-      } catch (err) {
-        console.error(err);
-        status.textContent = "❌ Network error";
+      if (error) {
+        console.error(error);
+        status.textContent = "❌ " + error.message;
+      } else {
+        status.textContent = "✅ Check your email for your login link";
       }
     });
   </script>
