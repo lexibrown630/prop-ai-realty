@@ -8,9 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --gold:#C9A84C; --navy:#0D1B2A; --cream:#FAF8F3;
-}
+:root { --gold:#C9A84C; --navy:#0D1B2A; --cream:#FAF8F3; }
 body { font-family:'DM Sans',sans-serif; background:var(--cream); margin:0; }
 
 nav {
@@ -60,6 +58,7 @@ nav {
   background:#fff;
   border-radius:10px;
 }
+
 .msg { margin-bottom:10px; }
 .msg.user { text-align:right; }
 .msg.bot { text-align:left; }
@@ -80,14 +79,14 @@ nav {
 <nav>
   <div class="logo">PropAI</div>
   <div class="nav-tabs">
-    <button class="active" onclick="showPanel('tools')">Tools</button>
+    <button onclick="showPanel('tools')">Tools</button>
     <button onclick="showPanel('followup')">Follow-Up</button>
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
-    <button onclick="window.location.href='/login.html'">Login</button>
-    <button onclick="window.location.href='/src/payments.html'">Pricing</button>
-    <button onclick="upgrade()">Upgrade</button>
-    <button onclick="billing()">Billing</button>
+
+    <!-- CLEAN NAV -->
+    <button onclick="goLogin()">Login</button>
+    <button onclick="goPricing()">Pricing</button>
   </div>
 </nav>
 
@@ -142,16 +141,25 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* AUTH CHECK */
+/* 🔥 AUTH FLOW */
 async function checkAuth() {
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) {
-    window.location.href = "/payments.html";
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // NOT LOGGED IN → force login
+  if (!user) {
+    window.location.href = "/login.html";
+    return;
   }
+
+  // LOGGED IN → allow dashboard (for now)
 }
 checkAuth();
 
-/* NAV */
+/* NAVIGATION */
+window.goLogin = () => window.location.href = "/login.html";
+window.goPricing = () => window.location.href = "/payments.html";
+
+/* PANELS */
 window.showPanel = function(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
@@ -217,29 +225,12 @@ window.generateListing = async function(){
   document.getElementById('listing-content').innerText=data.reply;
 }
 
-/* STRIPE */
-window.upgrade = async function(){
-  const res=await fetch('/.netlify/functions/createCheckout',{method:'POST'});
-  const data=await res.json();
-  window.location=data.url;
-}
-
-window.billing = async function(){
-  const res=await fetch('/.netlify/functions/createPortal',{method:'POST'});
-  const data=await res.json();
-  window.location=data.url;
-}
-
-/* SUCCESS / CANCEL HANDLER */
+/* SUCCESS MESSAGE */
 window.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
 
   if (params.get("success")) {
     alert("Payment successful 🎉");
-  }
-
-  if (params.get("canceled")) {
-    alert("Payment canceled");
   }
 });
 </script>
