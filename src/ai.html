@@ -39,6 +39,7 @@ button {
   border: none;
   cursor: pointer;
   width: 100%;
+  font-weight: bold;
 }
 
 .output {
@@ -47,6 +48,12 @@ button {
   margin-top: 20px;
   border-radius: 8px;
   white-space: pre-line;
+}
+
+.cta {
+  margin-top: 15px;
+  background: #0D1B2A;
+  color: white;
 }
 </style>
 </head>
@@ -84,6 +91,10 @@ button {
   <button onclick="generate()">Generate Follow-Up</button>
 
   <div id="result" class="output" style="display:none;"></div>
+
+  <button id="bookBtn" class="cta" style="display:none;" onclick="goToCalendar()">
+    📅 Book Showing
+  </button>
 </div>
 
 <script type="module">
@@ -100,39 +111,66 @@ if (!session) {
   window.location.href = "/src/login.html";
 }
 
-// BACK BUTTON
+// NAV
 window.goBack = () => {
   window.location.href = "/index.html";
 };
 
-// 🚀 SMARTER RESPONSE
-window.generate = () => {
+window.goToCalendar = () => {
+  window.location.href = "/src/calendar.html";
+};
+
+// 🚀 REAL AI CALL
+window.generate = async () => {
   const name = document.getElementById("name").value || "there";
   const type = document.getElementById("type").value;
   const location = document.getElementById("location").value;
   const features = document.getElementById("features").value;
   const situation = document.getElementById("situation").value;
 
-  const response = `
-Hi ${name},
+  const message = `
+Client: ${name}
+Property: ${type}
+Location: ${location}
+Features: ${features}
+Situation: ${situation}
 
-Thanks for reaching out about the ${type} in ${location}!
-
-This property features ${features}, and it’s a great opportunity based on what you’re looking for.
-
-${situation ? "I understand your situation: " + situation : ""}
-
-I’d be happy to get you more details or schedule a showing at a time that works for you.
-
-Let me know what your availability looks like!
-
-Best,
-Your Agent
-  `;
+Write a follow-up message that encourages booking a showing.
+`;
 
   const result = document.getElementById("result");
+  const bookBtn = document.getElementById("bookBtn");
+
   result.style.display = "block";
-  result.innerText = response;
+  result.innerText = "Generating...";
+  bookBtn.style.display = "none";
+
+  try {
+    const res = await fetch("/.netlify/functions/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        type: "followup"
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.reply) {
+      result.innerText = data.reply;
+
+      // 🔥 SHOW BOOK BUTTON AFTER AI RESPONSE
+      bookBtn.style.display = "block";
+
+    } else {
+      result.innerText = "Error generating response";
+      console.error(data);
+    }
+
+  } catch (err) {
+    result.innerText = "Server error";
+    console.error(err);
+  }
 };
 </script>
 
