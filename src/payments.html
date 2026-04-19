@@ -1,65 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Choose Plan</title>
+<meta charset="UTF-8">
+<title>Choose Plan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: #0D1B2A;
+  color: white;
+  text-align: center;
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  margin-top: 40px;
+}
+
+.plans {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 50px;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: white;
+  color: black;
+  padding: 30px;
+  border-radius: 12px;
+  width: 250px;
+}
+
+.price {
+  font-size: 24px;
+  margin: 10px 0;
+}
+
+button {
+  margin-top: 15px;
+  padding: 10px;
+  width: 100%;
+  border: none;
+  background: #C9A84C;
+  font-weight: bold;
+  cursor: pointer;
+}
+</style>
 </head>
+
 <body>
-  <h1>Choose your plan</h1>
 
-  <button onclick="goToCheckout('price_1TN45MRqy7IFyseNJtzPtgVC')">
-    Starter - $79/month
-  </button>
+<h1>Choose your plan</h1>
 
-  <button onclick="goToCheckout('price_1TN46TRqy7IFyseNHEiBa8xe')">
-    Agency - $149/month
-  </button>
+<div class="plans">
 
-  <button onclick="goToCheckout('price_1TN47TRqy7IFyseNqnUSkEoO')">
-    Pro - $389/month
-  </button>
+  <div class="card">
+    <h2>Starter</h2>
+    <div class="price">$79/mo</div>
+    <button onclick="checkout('price_1TN45MRqy7IFyseNJtzPtgVC')">Select</button>
+  </div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  <div class="card">
+    <h2>Pro</h2>
+    <div class="price">$149/mo</div>
+    <button onclick="checkout('price_1TN46TRqy7IFyseNHEiBa8xe')">Select</button>
+  </div>
 
-    const supabase = createClient(
-      "https://jrmqdojsxjtkjpczaysp.supabase.co",
-      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-    );
+  <div class="card">
+    <h2>Agency</h2>
+    <div class="price">$349/mo</div>
+    <button onclick="checkout('price_1TN47TRqy7IFyseNqnUSkEoO')">Select</button>
+  </div>
 
-    window.goToCheckout = async (priceId) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+</div>
 
-      if (!user) {
-        alert("You must be logged in first");
-        return;
-      }
+<script>
+async function checkout(priceId) {
+  const res = await fetch("/.netlify/functions/createCheckout", {
+    method: "POST",
+    body: JSON.stringify({ priceId })
+  });
 
-      console.log("User:", user.email);
+  const data = await res.json();
 
-      const res = await fetch("/.netlify/functions/createCheckout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          priceId: priceId,
-          email: user.email,
-        }),
-      });
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    alert("❌ No checkout URL returned");
+  }
+}
+</script>
 
-      const data = await res.json();
-
-      console.log("Checkout response:", data);
-
-      if (!data.url) {
-        alert("❌ No checkout URL returned");
-        return;
-      }
-
-      window.location.href = data.url;
-    };
-  </script>
 </body>
 </html>
