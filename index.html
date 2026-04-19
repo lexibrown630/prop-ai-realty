@@ -136,33 +136,35 @@ nav {
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+/* 🚨 HIDE PAGE IMMEDIATELY */
+document.documentElement.style.display = "none";
+
 const supabase = createClient(
   "https://jrmqdojsxjtkjpczaysp.supabase.co",
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* 🔥 HARD AUTH GATE (NO DASHBOARD WITHOUT LOGIN) */
-document.body.style.visibility = "hidden";
-
-async function checkAuth() {
+/* 🔐 RELIABLE AUTH CHECK */
+async function enforceAuth() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    // 🔥 THIS IS THE FIX — wait for real session
+    const { data: { session } } = await supabase.auth.getSession();
 
-    if (!user) {
+    if (!session || !session.user) {
       window.location.replace("/login.html");
       return;
     }
 
-    // user is logged in → show app
-    document.body.style.visibility = "visible";
+    // ✅ user confirmed → show app
+    document.documentElement.style.display = "block";
 
   } catch (err) {
-    console.error(err);
+    console.error("Auth error:", err);
     window.location.replace("/login.html");
   }
 }
 
-await checkAuth();
+await enforceAuth();
 
 /* NAV */
 window.goLogin = () => window.location.href = "/login.html";
