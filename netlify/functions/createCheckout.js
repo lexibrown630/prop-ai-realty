@@ -2,7 +2,7 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.handler = async (event) => {
   try {
-    // Only allow POST
+    // ✅ Only allow POST
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
@@ -12,6 +12,9 @@ exports.handler = async (event) => {
 
     const { priceId, email } = JSON.parse(event.body || "{}");
 
+    console.log("📥 Incoming:", { priceId, email });
+
+    // 🚨 Validate input
     if (!priceId || !email) {
       return {
         statusCode: 400,
@@ -30,6 +33,9 @@ exports.handler = async (event) => {
       plan = "agency";
     }
 
+    console.log("🧠 Plan selected:", plan);
+
+    // ✅ CREATE CHECKOUT SESSION
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
@@ -43,15 +49,25 @@ exports.handler = async (event) => {
         },
       ],
 
-      // 🔥 THIS PASSES PLAN TO WEBHOOK
+      // 🔥 THIS IS IMPORTANT FOR WEBHOOK
       metadata: {
         plan: plan,
       },
 
-      // ✅ CLEAN SUCCESS FLOW (NO ROUTER)
-      success_url: "https://prop-ai-realty.netlify.app/index.html",
-      cancel_url: "https://prop-ai-realty.netlify.app/src/payments.html",
+      success_url: "https://prop-ai-realty.netlify.app/index.html?success=true",
+      cancel_url: "https://prop-ai-realty.netlify.app/src/payments.html?canceled=true",
     });
+
+    console.log("✅ Session created:", session.id);
+    console.log("🔗 Checkout URL:", session.url);
+
+    // 🚨 SAFETY CHECK
+    if (!session.url) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "No checkout URL returned from Stripe" }),
+      };
+    }
 
     return {
       statusCode: 200,
@@ -59,11 +75,13 @@ exports.handler = async (event) => {
     };
 
   } catch (err) {
-    console.log("STRIPE ERROR:", err);
+    console.error("❌ STRIPE ERROR:", err);
 
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({
+        error: err.message || "Internal server error",
+      }),
     };
   }
 };
