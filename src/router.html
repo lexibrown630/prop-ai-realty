@@ -5,7 +5,7 @@
   <title>Routing - PropAI Realty</title>
 </head>
 <body>
-  <h2>Logging you in...</h2>
+  <h2 id="status">Logging you in...</h2>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
@@ -15,27 +15,36 @@
       "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
     );
 
+    const status = document.getElementById("status");
+
     async function handleLogin() {
-      // 🔑 This is the KEY FIX
-      const { data, error } = await supabase.auth.getSession();
+      // ✅ CRITICAL: process magic link tokens from URL
+      const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
 
       if (error) {
-        console.error("Auth error:", error);
+        console.error("Exchange error:", error);
+        status.textContent = "❌ Login link expired or invalid. Try again.";
+        return;
       }
 
-      const session = data.session;
+      // Now get session AFTER exchange
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
 
       if (!session) {
-        console.log("No session found, redirecting to login...");
-        window.location.href = "/src/login.html";
+        status.textContent = "❌ No session found. Redirecting...";
+        setTimeout(() => {
+          window.location.href = "/src/login.html";
+        }, 2000);
         return;
       }
 
       const email = session.user.email;
+      console.log("Logged in:", email);
 
-      console.log("User logged in:", email);
+      status.textContent = "✅ Logged in! Checking access...";
 
-      // 🔐 Check paid access
+      // 🔐 Check access
       const res = await fetch("/.netlify/functions/checkAccess", {
         method: "POST",
         headers: {
@@ -47,11 +56,13 @@
       const result = await res.json();
 
       if (!result.access) {
+        status.textContent = "➡️ Redirecting to payment...";
         window.location.href = "/src/payments.html";
         return;
       }
 
-      // ✅ SUCCESS → go to app
+      // ✅ SUCCESS
+      status.textContent = "🚀 Redirecting to dashboard...";
       window.location.href = "/index.html";
     }
 
