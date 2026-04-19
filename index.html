@@ -127,7 +127,7 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-// 🚀 PAGE ACCESS CHECK
+// 🔐 AUTH + ACCESS CONTROL
 async function checkAccess() {
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -138,7 +138,7 @@ async function checkAccess() {
 
   const email = session.user.email;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("email", email);
@@ -150,7 +150,6 @@ async function checkAccess() {
     return;
   }
 
-  // BUTTON TOGGLE
   const upgradeBtn = document.getElementById("upgradeBtn");
   const manageBtn = document.getElementById("manageBtn");
 
@@ -166,60 +165,34 @@ async function checkAccess() {
   document.getElementById("planText").innerHTML =
     "Current Plan: <span class='plan'>" + user.plan.toUpperCase() + "</span>";
 
-  renderFeatures(user.plan);
+  renderFeatures();
 }
 
-// 🔥 CLICKABLE FEATURES
-function renderFeatures(plan) {
+// 🚀 DASHBOARD FEATURES (ALL CONNECTED)
+function renderFeatures() {
   const el = document.getElementById("features");
 
-  if (plan === "starter") {
-    el.innerHTML = `
-      <div class="card" onclick="goTo('/src/leads.html')">
-        <h3>Leads</h3>
-      </div>
+  el.innerHTML = `
+    <div class="card" onclick="goTo('/src/ai.html')">
+      <h3>AI Follow-Up</h3>
+      <p>Generate AI responses & automate follow-ups</p>
+    </div>
 
-      <div class="card" onclick="goTo('/src/calendar.html')">
-        <h3>Scheduling</h3>
-      </div>
-    `;
-  }
+    <div class="card" onclick="goTo('/src/calendar.html')">
+      <h3>Scheduling</h3>
+      <p>Book showings & manage calendar</p>
+    </div>
 
-  if (plan === "pro") {
-    el.innerHTML = `
-      <div class="card" onclick="goTo('/src/ai.html')">
-        <h3>AI Follow-Up</h3>
-      </div>
+    <div class="card" onclick="goTo('/src/listings.html')">
+      <h3>Listings</h3>
+      <p>Create high-converting property listings</p>
+    </div>
 
-      <div class="card" onclick="goTo('/src/calendar.html')">
-        <h3>Smart Scheduling</h3>
-      </div>
-
-      <div class="card" onclick="goTo('/src/listings.html')">
-        <h3>Listings</h3>
-      </div>
-    `;
-  }
-
-  if (plan === "agency") {
-    el.innerHTML = `
-      <div class="card" onclick="goTo('/src/ai.html')">
-        <h3>AI Suite</h3>
-      </div>
-
-      <div class="card" onclick="goTo('/src/calendar.html')">
-        <h3>Scheduling</h3>
-      </div>
-
-      <div class="card" onclick="goTo('/src/listings.html')">
-        <h3>Automation</h3>
-      </div>
-
-      <div class="card" onclick="goTo('/src/leads.html')">
-        <h3>CRM</h3>
-      </div>
-    `;
-  }
+    <div class="card" onclick="goTo('/src/leads.html')">
+      <h3>Leads</h3>
+      <p>Track and manage your clients</p>
+    </div>
+  `;
 }
 
 // 🔗 NAVIGATION
@@ -227,17 +200,20 @@ window.goTo = (path) => {
   window.location.href = path;
 };
 
-// BILLING
+// 💳 BILLING PAGE
 window.goToBilling = () => {
   window.location.href = "/src/payments.html";
 };
 
-// STRIPE PORTAL
+// 💳 STRIPE CUSTOMER PORTAL
 window.manageSubscription = async () => {
   const { data: { session } } = await supabase.auth.getSession();
 
   const res = await fetch("/.netlify/functions/createPortal", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ email: session.user.email }),
   });
 
@@ -246,16 +222,18 @@ window.manageSubscription = async () => {
   if (data.url) {
     window.location.href = data.url;
   } else {
-    alert("Error opening portal");
+    alert("Error opening billing portal");
+    console.error(data);
   }
 };
 
-// LOGOUT
+// 🚪 LOGOUT
 window.logout = async () => {
   await supabase.auth.signOut();
   window.location.href = "/src/login.html";
 };
 
+// INIT
 checkAccess();
 </script>
 
