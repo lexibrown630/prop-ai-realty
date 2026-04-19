@@ -1,43 +1,35 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Routing...</title>
+</head>
+<body>
+  <h2>Logging you in...</h2>
 
-const supabase = createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-);
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// ONLY run routing if user is already logged in
-async function routeUser() {
-  const { data: { user } } = await supabase.auth.getUser();
+    const supabase = createClient(
+      "https://jrmqdojsxjtkjpczaysp.supabase.co",
+      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+    );
 
-  // ❌ NOT logged in → STOP (stay on login page)
-  if (!user) {
-    console.log("No user — staying on login page");
-    return;
-  }
+    async function handleLogin() {
+      // 👇 IMPORTANT: this processes the magic link session
+      const { data, error } = await supabase.auth.getSession();
 
-  const email = user.email;
+      console.log("Session:", data);
 
-  console.log("User detected:", email);
+      if (error || !data.session) {
+        document.body.innerHTML = "<h2>Login failed. Try again.</h2>";
+        return;
+      }
 
-  // 🔐 Check access
-  const res = await fetch("/.netlify/functions/checkAccess", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
+      // ✅ SUCCESS → go to dashboard
+      window.location.href = "/index.html";
+    }
 
-  const data = await res.json();
-
-  // ❌ Not paid → go to payments
-  if (!data.access) {
-    window.location.href = "/src/payments.html";
-    return;
-  }
-
-  // ✅ Paid → dashboard
-  window.location.href = "/index.html";
-}
-
-// ⛔ IMPORTANT: DO NOT auto-run immediately
-// Wait until page is ready
-window.addEventListener("load", routeUser);
+    handleLogin();
+  </script>
+</body>
+</html>
