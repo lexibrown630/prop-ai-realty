@@ -8,21 +8,75 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-/* KEEPING YOUR ORIGINAL STYLES EXACTLY */
+/* === KEEPING YOUR ORIGINAL DESIGN === */
 :root {
   --gold:#C9A84C; --navy:#0D1B2A; --cream:#FAF8F3;
 }
 body { font-family:'DM Sans',sans-serif; background:var(--cream); margin:0; }
-nav { background:var(--navy); color:white; padding:16px; display:flex; justify-content:space-between; align-items:center; }
+
+nav {
+  background:var(--navy);
+  color:white;
+  padding:16px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
 .logo { font-family:'Playfair Display',serif; color:var(--gold); font-size:22px; }
-.nav-tabs button { background:none; border:none; color:#aaa; margin-left:10px; cursor:pointer; }
+
+.nav-tabs button {
+  background:none;
+  border:none;
+  color:#8899AA;
+  margin-left:12px;
+  cursor:pointer;
+  font-size:13px;
+}
 .nav-tabs button.active { color:var(--gold); }
-.panel { display:none; padding:20px; }
+
+.panel { display:none; padding:30px; max-width:1100px; margin:auto; }
 .panel.active { display:block; }
-.chat-box { border:1px solid #ddd; height:300px; overflow:auto; padding:10px; background:white; }
+
+/* HERO */
+.hero {
+  background:var(--navy);
+  color:white;
+  border-radius:20px;
+  padding:40px;
+  margin-bottom:20px;
+}
+
+/* CARDS */
+.card {
+  background:white;
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:20px;
+  border:1px solid #eee;
+}
+
+/* CHAT */
+.chat-box {
+  height:300px;
+  overflow:auto;
+  border:1px solid #eee;
+  padding:10px;
+  background:#fff;
+  border-radius:10px;
+}
 .msg { margin-bottom:10px; }
 .msg.user { text-align:right; }
 .msg.bot { text-align:left; }
+
+/* BUTTONS */
+.btn {
+  background:var(--gold);
+  border:none;
+  padding:10px 16px;
+  cursor:pointer;
+  border-radius:8px;
+  font-weight:600;
+}
 </style>
 </head>
 
@@ -31,7 +85,7 @@ nav { background:var(--navy); color:white; padding:16px; display:flex; justify-c
 <nav>
   <div class="logo">PropAI</div>
   <div class="nav-tabs">
-    <button onclick="showPanel('tools')" class="active">Tools</button>
+    <button class="active" onclick="showPanel('tools')">Tools</button>
     <button onclick="showPanel('followup')">Follow-Up</button>
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
@@ -40,34 +94,53 @@ nav { background:var(--navy); color:white; padding:16px; display:flex; justify-c
   </div>
 </nav>
 
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>AI automation built for real estate professionals</h1>
+  <p>Generate listings, follow up with leads, and book showings automatically.</p>
+</div>
+
 <!-- TOOLS -->
 <div id="panel-tools" class="panel active">
-  <h2>Welcome to PropAI</h2>
+  <div class="card">
+    <h3>Welcome to PropAI</h3>
+    <p>Select a tool above to get started.</p>
+  </div>
 </div>
 
 <!-- FOLLOWUP -->
 <div id="panel-followup" class="panel">
-  <h3>Follow-Up Generator</h3>
-  <input id="lead-name" placeholder="Name">
-  <button onclick="generateFollowUp()">Generate</button>
-  <pre id="email-content"></pre>
+  <div class="card">
+    <h3>AI Lead Follow-Up</h3>
+    <input id="lead-name" placeholder="Lead name">
+    <button class="btn" onclick="generateFollowUp()">Generate</button>
+    <pre id="email-content"></pre>
+  </div>
 </div>
 
 <!-- LISTING -->
 <div id="panel-listing" class="panel">
-  <h3>Listing Generator</h3>
-  <input id="prop-address" placeholder="Address">
-  <button onclick="generateListing()">Generate</button>
-  <pre id="listing-content"></pre>
+  <div class="card">
+    <h3>Listing Generator</h3>
+    <input id="prop-address" placeholder="Property address">
+    <button class="btn" onclick="generateListing()">Generate</button>
+    <pre id="listing-content"></pre>
+  </div>
 </div>
 
-<!-- BOOKING / CHAT -->
+<!-- BOOKING -->
 <div id="panel-booking" class="panel">
-  <h3>AI Chat</h3>
-  <div id="chat-messages" class="chat-box"></div>
-  <input id="chat-input" placeholder="Type..." onkeydown="if(event.key==='Enter')sendChat()">
-  <button onclick="sendChat()">Send</button>
+  <div class="card">
+    <h3>AI Assistant</h3>
+    <div id="chat-messages" class="chat-box"></div>
+    <input id="chat-input" placeholder="Type message..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn" onclick="sendChat()">Send</button>
+  </div>
 </div>
+
+</main>
 
 <script>
 
@@ -103,23 +176,6 @@ async function sendChat(){
   appendMsg(data.reply || 'Error','bot');
 }
 
-/* LISTING */
-async function generateListing(){
-  const address=document.getElementById('prop-address').value;
-
-  const res=await fetch('/.netlify/functions/chat',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      message:`Create listing for ${address}`,
-      type:'listing'
-    })
-  });
-
-  const data=await res.json();
-  document.getElementById('listing-content').innerText=data.reply;
-}
-
 /* FOLLOWUP */
 async function generateFollowUp(){
   const name=document.getElementById('lead-name').value;
@@ -128,13 +184,30 @@ async function generateFollowUp(){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      message:`Follow up with ${name}`,
+      message:`Write a real estate follow-up for ${name}`,
       type:'followup'
     })
   });
 
   const data=await res.json();
   document.getElementById('email-content').innerText=data.reply;
+}
+
+/* LISTING */
+async function generateListing(){
+  const address=document.getElementById('prop-address').value;
+
+  const res=await fetch('/.netlify/functions/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      message:`Create MLS listing for ${address}`,
+      type:'listing'
+    })
+  });
+
+  const data=await res.json();
+  document.getElementById('listing-content').innerText=data.reply;
 }
 
 /* STRIPE */
