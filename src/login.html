@@ -2,33 +2,78 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Login - PropAI</title>
+<title>PropAI Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
+:root {
+  --gold: #C9A84C;
+  --navy: #0D1B2A;
+  --cream: #FAF8F3;
+}
+
 body {
-  font-family: Arial;
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: linear-gradient(135deg, #0D1B2A, #1B263B);
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
 }
 
-.box {
+.card {
+  background: white;
+  padding: 40px;
+  border-radius: 14px;
+  width: 320px;
   text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  margin-bottom: 20px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+button {
+  margin-top: 20px;
+  width: 100%;
+  padding: 12px;
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#status {
+  margin-top: 15px;
+  font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h1>Login</h1>
+<div class="card">
+  <h1>PropAI</h1>
+  <p>Sign in to your account</p>
 
   <input type="email" id="email" placeholder="Enter your email" />
-  <br><br>
   <button onclick="login()">Send Magic Link</button>
 
-  <p id="status"></p>
+  <div id="status"></div>
 </div>
 
 <script type="module">
@@ -49,11 +94,8 @@ window.login = async () => {
     }
   });
 
-  if (error) {
-    document.getElementById("status").innerText = "❌ " + error.message;
-  } else {
-    document.getElementById("status").innerText = "✅ Check your email";
-  }
+  document.getElementById("status").innerText =
+    error ? "❌ " + error.message : "✅ Check your email";
 };
 </script>
 
