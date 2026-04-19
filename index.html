@@ -47,6 +47,7 @@ nav {
   padding: 8px 14px;
   cursor: pointer;
   font-weight: bold;
+  border-radius: 6px;
 }
 
 /* HERO */
@@ -90,18 +91,15 @@ nav {
   padding: 25px;
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
 }
 
 .card h3 {
   margin-top: 0;
-}
-
-.card button {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: var(--gold);
-  border: none;
-  cursor: pointer;
 }
 </style>
 </head>
@@ -110,8 +108,10 @@ nav {
 
 <nav>
   <div class="logo">PropAI</div>
+
   <div class="nav-buttons">
     <button class="btn" onclick="goToBilling()">Upgrade</button>
+    <button class="btn" onclick="manageSubscription()">Manage</button>
     <button class="btn" onclick="logout()">Logout</button>
   </div>
 </nav>
@@ -136,7 +136,6 @@ const supabase = createClient(
 async function checkAccess() {
   const { data: { session } } = await supabase.auth.getSession();
 
-  // 🚫 NOT LOGGED IN
   if (!session) {
     window.location.href = "/src/login.html";
     return;
@@ -144,15 +143,19 @@ async function checkAccess() {
 
   const email = session.user.email;
 
-  // 🔍 GET USER
-  const { data, error } = await supabase
+  // 🔥 HANDLE RETURN FROM STRIPE
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("success") === "true") {
+    console.log("✅ Payment success return");
+  }
+
+  const { data } = await supabase
     .from("users")
     .select("*")
     .eq("email", email);
 
   let user = data && data[0];
 
-  // 🚨 CREATE USER IF MISSING
   if (!user) {
     await supabase.from("users").insert([
       {
@@ -166,20 +169,18 @@ async function checkAccess() {
     return;
   }
 
-  // 🚫 NOT SUBSCRIBED
   if (user.subscription_status !== "active") {
     window.location.href = "/src/payments.html";
     return;
   }
 
-  // ✅ SHOW PLAN
   document.getElementById("planText").innerHTML =
     "Current Plan: <span class='plan'>" + user.plan.toUpperCase() + "</span>";
 
   renderFeatures(user.plan);
 }
 
-// 🎯 PLAN FEATURES
+// 🎯 FEATURES
 function renderFeatures(plan) {
   const el = document.getElementById("features");
 
@@ -187,7 +188,7 @@ function renderFeatures(plan) {
     el.innerHTML = `
       <div class="card">
         <h3>Leads</h3>
-        <p>Basic lead tracking system</p>
+        <p>Basic lead tracking</p>
       </div>
 
       <div class="card">
@@ -241,9 +242,30 @@ function renderFeatures(plan) {
   }
 }
 
-// 🔥 UPGRADE BUTTON
+// 🔥 BILLING PAGE
 window.goToBilling = () => {
   window.location.href = "/src/payments.html";
+};
+
+// 🔥 STRIPE PORTAL
+window.manageSubscription = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  const email = session.user.email;
+
+  const res = await fetch("/.netlify/functions/createPortal", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await res.json();
+
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    alert("Error opening portal");
+    console.error(data);
+  }
 };
 
 // LOGOUT
