@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PropAI App</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+}
+
+nav {
+  display: flex;
+  background: #0D1B2A;
+  color: white;
+}
+
+.nav-tab {
+  padding: 15px;
+  cursor: pointer;
+}
+
+.nav-tab.active {
+  background: #C9A84C;
+  color: black;
+}
+
+.panel {
+  display: none;
+  padding: 20px;
+}
+
+.panel.active {
+  display: block;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-tab active" onclick="showPanel('tools')">Chat</div>
+  <div class="nav-tab" onclick="showPanel('followup')">Follow-Ups</div>
+  <div class="nav-tab" onclick="showPanel('listing')">Listings</div>
+  <div class="nav-tab" onclick="showPanel('booking')">Booking</div>
+</nav>
+
+<!-- PANELS -->
+
+<div id="panel-tools" class="panel active">
+  <h2>AI Chat</h2>
+  <div id="chat-messages" style="height:200px;overflow:auto;border:1px solid #ccc;"></div>
+  <input id="chat-input" placeholder="Ask something..." />
+  <button onclick="sendChat()">Send</button>
+</div>
+
+<div id="panel-followup" class="panel">
+  <h2>Follow-Ups</h2>
+  <input id="lead-name" placeholder="Name" />
+  <input id="lead-contact" placeholder="Email/Phone" />
+  <textarea id="lead-notes" placeholder="Notes"></textarea>
+  <button id="followup-btn" onclick="generateFollowUp()">Generate</button>
+
+  <pre id="email-content"></pre>
+  <pre id="sms-content"></pre>
+</div>
+
+<div id="panel-listing" class="panel">
+  <h2>Listings</h2>
+  <input id="prop-address" placeholder="Address" />
+  <input id="prop-beds" placeholder="Beds" />
+  <input id="prop-price" placeholder="Price" />
+  <button id="listing-btn" onclick="generateListing()">Generate</button>
+
+  <pre id="listing-content"></pre>
+</div>
+
+<div id="panel-booking" class="panel">
+  <h2>Booking</h2>
+  <button onclick="getSlots()">Get Available Times</button>
+  <div id="slots"></div>
+</div>
+
+<script src="/script.js"></script>
+
+<script>
+// SIMPLE BOOKING HOOK (connects your booking.js)
+async function getSlots() {
+  const res = await fetch("/.netlify/functions/booking", {
+    method: "POST",
+    body: JSON.stringify({ action: "suggest" })
+  });
+
+  const data = await res.json();
+
+  const el = document.getElementById("slots");
+  el.innerHTML = "";
+
+  data.suggestions.forEach(s => {
+    const btn = document.createElement("button");
+    btn.innerText = new Date(s.start).toLocaleString();
+    btn.onclick = () => bookSlot(s);
+    el.appendChild(btn);
+  });
+}
+
+async function bookSlot(slot) {
+  const res = await fetch("/.netlify/functions/booking", {
+    method: "POST",
+    body: JSON.stringify({
+      action: "book",
+      startTime: slot.start,
+      endTime: slot.end,
+      email: "test@test.com"
+    })
+  });
+
+  const data = await res.json();
+  alert(data.message || data.error);
+}
+</script>
+
+</body>
+</html>
