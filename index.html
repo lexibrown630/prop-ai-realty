@@ -36,7 +36,12 @@ nav {
   font-size: 22px;
 }
 
-.logout {
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
   background: var(--gold);
   border: none;
   padding: 8px 14px;
@@ -105,7 +110,10 @@ nav {
 
 <nav>
   <div class="logo">PropAI</div>
-  <button class="logout" onclick="logout()">Logout</button>
+  <div class="nav-buttons">
+    <button class="btn" onclick="goToBilling()">Upgrade</button>
+    <button class="btn" onclick="logout()">Logout</button>
+  </div>
 </nav>
 
 <div class="hero">
@@ -128,6 +136,7 @@ const supabase = createClient(
 async function checkAccess() {
   const { data: { session } } = await supabase.auth.getSession();
 
+  // 🚫 NOT LOGGED IN
   if (!session) {
     window.location.href = "/src/login.html";
     return;
@@ -135,25 +144,42 @@ async function checkAccess() {
 
   const email = session.user.email;
 
-  const { data } = await supabase
+  // 🔍 GET USER
+  const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("email", email);
 
-  const user = data && data[0];
+  let user = data && data[0];
 
-  if (!user || user.subscription_status !== "active") {
+  // 🚨 CREATE USER IF MISSING
+  if (!user) {
+    await supabase.from("users").insert([
+      {
+        email: email,
+        subscription_status: "inactive",
+        plan: "starter"
+      }
+    ]);
+
     window.location.href = "/src/payments.html";
     return;
   }
 
+  // 🚫 NOT SUBSCRIBED
+  if (user.subscription_status !== "active") {
+    window.location.href = "/src/payments.html";
+    return;
+  }
+
+  // ✅ SHOW PLAN
   document.getElementById("planText").innerHTML =
     "Current Plan: <span class='plan'>" + user.plan.toUpperCase() + "</span>";
 
   renderFeatures(user.plan);
 }
 
-// 🔥 REAL DASHBOARD FEEL
+// 🎯 PLAN FEATURES
 function renderFeatures(plan) {
   const el = document.getElementById("features");
 
@@ -162,13 +188,11 @@ function renderFeatures(plan) {
       <div class="card">
         <h3>Leads</h3>
         <p>Basic lead tracking system</p>
-        <button onclick="alert('Leads feature coming soon')">Open</button>
       </div>
 
       <div class="card">
         <h3>Scheduling</h3>
         <p>Simple booking system</p>
-        <button onclick="alert('Calendar coming soon')">Open</button>
       </div>
     `;
   }
@@ -178,19 +202,16 @@ function renderFeatures(plan) {
       <div class="card">
         <h3>AI Follow-Up</h3>
         <p>Automated responses</p>
-        <button onclick="alert('AI coming soon')">Launch</button>
       </div>
 
       <div class="card">
         <h3>Smart Scheduling</h3>
         <p>Advanced calendar</p>
-        <button onclick="alert('Scheduler coming soon')">Open</button>
       </div>
 
       <div class="card">
         <h3>Listings</h3>
         <p>AI listing generator</p>
-        <button onclick="alert('Listings coming soon')">Create</button>
       </div>
     `;
   }
@@ -219,6 +240,11 @@ function renderFeatures(plan) {
     `;
   }
 }
+
+// 🔥 UPGRADE BUTTON
+window.goToBilling = () => {
+  window.location.href = "/src/payments.html";
+};
 
 // LOGOUT
 window.logout = async () => {
