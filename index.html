@@ -40,6 +40,8 @@ async function checkAccess() {
   }
 
   const email = session.user.email;
+  document.body.innerHTML = "<h1>Logged in as: " + email + "</h1>";
+return;
   document.getElementById("status").innerText = "Logged in as: " + email;
 
   // 🔍 Check DB
