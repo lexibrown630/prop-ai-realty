@@ -1,9 +1,9 @@
 import nodemailer from "nodemailer";
 
-export async function handler(event) {
-  console.log("FUNCTION RUNNING");
-
+export async function handler(event, context) {
   try {
+    console.log("Function started");
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -13,7 +13,7 @@ export async function handler(event) {
     });
 
     const info = await transporter.sendMail({
-      from: `"PropAI Bookings" <${process.env.GMAIL_USER}>`,
+      from: `"PropAI" <${process.env.GMAIL_USER}>`,
       to: "airealty.agency26@gmail.com",
       subject: "TEST EMAIL",
       text: "Your email system is working ✅",
@@ -23,14 +23,14 @@ export async function handler(event) {
 
     return {
       statusCode: 200,
-      body: "Email sent",
+      body: JSON.stringify({ message: "Email sent" }),
     };
   } catch (error) {
     console.error("EMAIL ERROR:", error);
 
     return {
       statusCode: 500,
-      body: "Email failed",
+      body: JSON.stringify({ error: error.message }),
     };
   }
 }
