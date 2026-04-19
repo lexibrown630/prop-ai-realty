@@ -8,7 +8,6 @@ exports.handler = async (event) => {
   if (!process.env.OPENAI_API_KEY) {
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: "Missing OPENAI_API_KEY" }),
     };
   }
@@ -16,7 +15,6 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: "Method Not Allowed" }),
     };
   }
@@ -27,43 +25,30 @@ exports.handler = async (event) => {
     if (!message) {
       return {
         statusCode: 400,
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ error: "Missing message" }),
       };
     }
 
-    // -------------------------------
-    // PROMPT LOGIC (FIXED)
-    // -------------------------------
     let systemPrompt = "";
     let userPrompt = message;
 
     if (type === "listing") {
       systemPrompt =
-        "You are a real estate copywriter. Write detailed, compelling, high-end property listings that highlight features, lifestyle, and urgency.";
+        "You are a real estate copywriter. Write compelling, high-end property listings.";
 
-      userPrompt = `Create a real estate listing based on this:
-${message}
-
-Make it engaging, well-structured, and persuasive.`;
+      userPrompt = `Create a real estate listing:\n${message}`;
     } 
     else if (type === "followup") {
       systemPrompt =
-        "You are a real estate agent following up with leads. Be friendly, natural, and persuasive without sounding pushy.";
+        "You are a real estate agent following up with leads. Be friendly, natural, and persuasive.";
 
-      userPrompt = `Write a follow-up message for this situation:
-${message}
-
-Keep it conversational and professional.`;
+      userPrompt = `Write a follow-up message:\n${message}`;
     } 
     else {
       systemPrompt =
-        "You are Alex, a helpful real estate assistant focused on booking showings and answering questions.";
+        "You are a helpful real estate assistant focused on booking showings.";
     }
 
-    // -------------------------------
-    // OPENAI CALL (ONLY ONCE)
-    // -------------------------------
     const response = await client.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
@@ -72,12 +57,8 @@ Keep it conversational and professional.`;
       ],
     });
 
-    // -------------------------------
-    // SUCCESS RESPONSE
-    // -------------------------------
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         reply: response.choices[0].message.content,
       }),
@@ -86,10 +67,7 @@ Keep it conversational and professional.`;
   } catch (error) {
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: error.message || "Server error",
-      }),
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };
