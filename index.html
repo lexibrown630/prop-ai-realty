@@ -122,7 +122,7 @@ async function checkAccess() {
 
   const email = session.user.email;
 
-  // 🔍 GET USER
+  // 🔍 GET USER DATA
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -131,7 +131,7 @@ async function checkAccess() {
 
   console.log("User DB:", data);
 
-  // 🚨 USER DOESN’T EXIST → CREATE
+  // 🚨 CREATE USER IF MISSING
   if (!data) {
     await supabase.from("users").insert([
       {
@@ -155,39 +155,54 @@ async function checkAccess() {
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "block";
 
-  document.getElementById("planLabel").innerText = 
+  // SHOW PLAN LABEL
+  document.getElementById("planLabel").innerText =
     "Current Plan: " + data.plan.toUpperCase();
 
+  // RENDER FEATURES
   renderFeatures(data.plan);
 }
 
-// 🎯 PLAN-BASED UI
+// 🎯 PLAN-BASED UI (STACKED CORRECTLY)
 function renderFeatures(plan) {
   const el = document.getElementById("features");
 
-  if (plan === "starter") {
-    el.innerHTML = `
-      <div class="card"><h2>Leads</h2><p>Basic lead tracking</p></div>
-      <div class="card"><h2>Bookings</h2><p>Basic scheduling</p></div>
+  let content = "";
+
+  // ✅ STARTER (always included)
+  content += `
+    <div class="card">
+      <h2>Leads</h2>
+      <p>Basic lead tracking</p>
+    </div>
+
+    <div class="card">
+      <h2>Bookings</h2>
+      <p>Basic scheduling</p>
+    </div>
+  `;
+
+  // ✅ PRO
+  if (plan === "pro" || plan === "agency") {
+    content += `
+      <div class="card">
+        <h2>Automation</h2>
+        <p>Advanced workflows</p>
+      </div>
     `;
   }
 
-  if (plan === "pro") {
-    el.innerHTML = `
-      <div class="card"><h2>Leads</h2><p>Advanced AI lead follow-up</p></div>
-      <div class="card"><h2>Bookings</h2><p>Smart scheduling system</p></div>
-      <div class="card"><h2>Automation</h2><p>Automated workflows</p></div>
-    `;
-  }
-
+  // ✅ AGENCY
   if (plan === "agency") {
-    el.innerHTML = `
-      <div class="card"><h2>Leads</h2><p>Full AI system</p></div>
-      <div class="card"><h2>Bookings</h2><p>Multi-agent scheduling</p></div>
-      <div class="card"><h2>Automation</h2><p>Advanced workflows</p></div>
-      <div class="card"><h2>White Label</h2><p>Custom branding + widgets</p></div>
+    content += `
+      <div class="card">
+        <h2>White Label</h2>
+        <p>Custom branding + widgets</p>
+      </div>
     `;
   }
+
+  el.innerHTML = content;
 }
 
 // LOGOUT
@@ -196,6 +211,7 @@ window.logout = async () => {
   window.location.href = "/src/login.html";
 };
 
+// RUN
 checkAccess();
 </script>
 
