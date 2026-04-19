@@ -1,38 +1,41 @@
 import nodemailer from "nodemailer";
 
-// These should match your Netlify environment variables
-const GMAIL_USER = process.env.GMAIL_USER;  // bookings@propai-bookings.art
-const GMAIL_PASS = process.env.GMAIL_PASS;  // 16-character app password
+export async function handler(event) {
+  console.log("FUNCTION RUNNING");
 
-export async function sendConfirmationEmail(toEmail, bookingDetails) {
   try {
-    // Create transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_PASS,
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS,
       },
     });
 
-    // Email options
+    // For now: hardcode email to TEST
+    const toEmail = "airealty.agency26@gmail.com";
+
     const mailOptions = {
-      from: `"PropAI Bookings" <${GMAIL_USER}>`,
+      from: `"PropAI Bookings" <${process.env.GMAIL_USER}>`,
       to: toEmail,
-      subject: "Your Booking is Confirmed!",
-      text: `Hi there!\n\nYour booking is confirmed:\n${bookingDetails}\n\nThank you for using PropAI!`,
-      html: `<p>Hi there!</p>
-             <p>Your booking is confirmed:</p>
-             <pre>${bookingDetails}</pre>
-             <p>Thank you for using <strong>PropAI</strong>!</p>`,
+      subject: "TEST EMAIL",
+      text: "Your email system is working ✅",
     };
 
-    // Send email
     const info = await transporter.sendMail(mailOptions);
+
     console.log("Email sent:", info.messageId);
-    return info;
+
+    return {
+      statusCode: 200,
+      body: "Email sent",
+    };
   } catch (error) {
-    console.error("Error sending email:", error);
-    throw error;
+    console.error("EMAIL ERROR:", error);
+
+    return {
+      statusCode: 500,
+      body: "Email failed",
+    };
   }
 }
