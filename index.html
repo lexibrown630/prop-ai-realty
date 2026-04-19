@@ -6,33 +6,128 @@
 
 <title>PropAI Dashboard</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
 <style>
+:root {
+  --gold: #C9A84C;
+  --navy: #0D1B2A;
+  --cream: #FAF8F3;
+}
+
 body {
-  font-family: Arial;
-  text-align: center;
-  padding: 40px;
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
 }
 
-#box {
-  max-width: 500px;
-  margin: auto;
+/* NAVBAR */
+nav {
+  background: var(--navy);
+  padding: 16px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-button {
-  padding: 10px 16px;
-  margin-top: 20px;
+.logo {
+  color: var(--gold);
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+}
+
+.logout {
+  background: var(--gold);
+  border: none;
+  padding: 8px 14px;
   cursor: pointer;
+  font-weight: bold;
+}
+
+/* HERO */
+.hero {
+  background: var(--navy);
+  color: white;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 42px;
+}
+
+.hero p {
+  margin-top: 10px;
+  opacity: 0.8;
+}
+
+/* STATUS */
+#status {
+  text-align: center;
+  margin: 30px 0;
+  font-weight: 500;
+}
+
+/* DASHBOARD GRID */
+.dashboard {
+  max-width: 1100px;
+  margin: auto;
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* CARDS */
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  transition: 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+/* PLAN BADGE */
+.plan {
+  display: inline-block;
+  background: var(--gold);
+  color: black;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="box">
-  <h1>Dashboard</h1>
-  <p id="status">Checking login...</p>
+<nav>
+  <div class="logo">PropAI</div>
+  <button class="logout" onclick="logout()">Logout</button>
+</nav>
 
-  <button onclick="logout()">Logout</button>
+<div class="hero">
+  <h1>Your AI Real Estate Dashboard</h1>
+  <p id="planText">Loading plan...</p>
+</div>
+
+<div id="status">Checking access...</div>
+
+<div class="dashboard">
+  <div id="features" class="grid"></div>
 </div>
 
 <script type="module">
@@ -44,69 +139,76 @@ const supabase = createClient(
 );
 
 async function checkAccess() {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
 
-    if (sessionError) {
-      document.getElementById("status").innerText = "Session error";
-      console.log(sessionError);
-      return;
-    }
+  if (!session) {
+    document.getElementById("status").innerText = "Redirecting to login...";
+    setTimeout(() => {
+      window.location.href = "/src/login.html";
+    }, 1200);
+    return;
+  }
 
-    // ❌ NOT LOGGED IN
-    if (!session) {
-      document.getElementById("status").innerText = "Not logged in → redirecting...";
-      setTimeout(() => {
-        window.location.href = "/src/login.html";
-      }, 1500);
-      return;
-    }
+  const email = session.user.email;
 
-    const email = session.user.email;
-    document.getElementById("status").innerText = "Logged in as: " + email;
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email);
 
-    // 🔍 GET USER FROM DB
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email);
+  const user = data && data[0];
 
-    console.log("DB DATA:", data);
-    console.log("DB ERROR:", error);
+  if (!user) {
+    document.getElementById("status").innerText = "No account → billing";
+    setTimeout(() => {
+      window.location.href = "/src/payments.html";
+    }, 1500);
+    return;
+  }
 
-    const user = data && data[0];
+  if (user.subscription_status !== "active") {
+    document.getElementById("status").innerText = "Subscription required → billing";
+    setTimeout(() => {
+      window.location.href = "/src/payments.html";
+    }, 1500);
+    return;
+  }
 
-    // ❌ USER NOT FOUND
-    if (!user) {
-      document.getElementById("status").innerText =
-        "❌ No user found in database → going to billing";
+  // ✅ SUCCESS UI
+  document.getElementById("status").innerText = "";
+  document.getElementById("planText").innerHTML =
+    "Current Plan: <span class='plan'>" + user.plan.toUpperCase() + "</span>";
 
-      setTimeout(() => {
-        window.location.href = "/src/payments.html";
-      }, 2000);
+  renderFeatures(user.plan);
+}
 
-      return;
-    }
+// 🎯 FEATURE RENDERING
+function renderFeatures(plan) {
+  const el = document.getElementById("features");
 
-    // ❌ NOT ACTIVE
-    if (user.subscription_status !== "active") {
-      document.getElementById("status").innerText =
-        "❌ Subscription inactive → going to billing";
+  if (plan === "starter") {
+    el.innerHTML = `
+      <div class="card"><h3>Leads</h3><p>Basic lead tracking system</p></div>
+      <div class="card"><h3>Scheduling</h3><p>Simple appointment booking</p></div>
+    `;
+  }
 
-      setTimeout(() => {
-        window.location.href = "/src/payments.html";
-      }, 2000);
+  if (plan === "pro") {
+    el.innerHTML = `
+      <div class="card"><h3>AI Follow-Up</h3><p>Automated lead responses</p></div>
+      <div class="card"><h3>Smart Scheduling</h3><p>Optimized booking system</p></div>
+      <div class="card"><h3>Listing AI</h3><p>Generate listings instantly</p></div>
+      <div class="card"><h3>Automation</h3><p>Workflow automation tools</p></div>
+    `;
+  }
 
-      return;
-    }
-
-    // ✅ SUCCESS
-    document.getElementById("status").innerText =
-      "✅ Logged in successfully | Plan: " + user.plan;
-
-  } catch (err) {
-    console.log("FATAL ERROR:", err);
-    document.getElementById("status").innerText = "Something broke — check console";
+  if (plan === "agency") {
+    el.innerHTML = `
+      <div class="card"><h3>Full AI Suite</h3><p>Everything unlocked</p></div>
+      <div class="card"><h3>Multi-Agent</h3><p>Team collaboration tools</p></div>
+      <div class="card"><h3>Advanced Automation</h3><p>Complex workflows</p></div>
+      <div class="card"><h3>White Label</h3><p>Custom branding features</p></div>
+    `;
   }
 }
 
