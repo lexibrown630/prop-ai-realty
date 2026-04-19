@@ -84,7 +84,7 @@ nav {
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
 
-    <!-- CLEAN NAV -->
+    <!-- NAV FIXED -->
     <button onclick="goLogin()">Login</button>
     <button onclick="goPricing()">Pricing</button>
   </div>
@@ -141,21 +141,30 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* 🔥 AUTH FLOW */
+/* 🔥 HARD AUTH GATE (NO DASHBOARD WITHOUT LOGIN) */
+document.body.style.visibility = "hidden";
+
 async function checkAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
 
-  // NOT LOGGED IN → force login
-  if (!user) {
-    window.location.href = "/login.html";
-    return;
+    if (!user) {
+      window.location.replace("/login.html");
+      return;
+    }
+
+    // user is logged in → show app
+    document.body.style.visibility = "visible";
+
+  } catch (err) {
+    console.error(err);
+    window.location.replace("/login.html");
   }
-
-  // LOGGED IN → allow dashboard (for now)
 }
-checkAuth();
 
-/* NAVIGATION */
+await checkAuth();
+
+/* NAV */
 window.goLogin = () => window.location.href = "/login.html";
 window.goPricing = () => window.location.href = "/payments.html";
 
