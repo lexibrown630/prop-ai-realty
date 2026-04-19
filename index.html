@@ -88,14 +88,12 @@ nav {
   padding: 25px;
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: 0.2s;
 }
 
-.card button {
-  margin-top: 10px;
-  padding: 8px;
-  background: var(--gold);
-  border: none;
-  cursor: pointer;
+.card:hover {
+  transform: translateY(-5px);
 }
 </style>
 </head>
@@ -129,6 +127,7 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
+// 🚀 PAGE ACCESS CHECK
 async function checkAccess() {
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -144,21 +143,14 @@ async function checkAccess() {
     .select("*")
     .eq("email", email);
 
-  let user = data && data[0];
+  const user = data && data[0];
 
   if (!user) {
-    await supabase.from("users").insert([
-      {
-        email,
-        subscription_status: "inactive",
-        plan: "starter"
-      }
-    ]);
-
     window.location.href = "/src/payments.html";
     return;
   }
 
+  // BUTTON TOGGLE
   const upgradeBtn = document.getElementById("upgradeBtn");
   const manageBtn = document.getElementById("manageBtn");
 
@@ -177,81 +169,70 @@ async function checkAccess() {
   renderFeatures(user.plan);
 }
 
+// 🔥 CLICKABLE FEATURES
 function renderFeatures(plan) {
   const el = document.getElementById("features");
 
   if (plan === "starter") {
     el.innerHTML = `
-      <div class="card">
+      <div class="card" onclick="goTo('/src/leads.html')">
         <h3>Leads</h3>
-        <p>Basic lead tracking</p>
-        <button onclick="go('/src/leads.html')">Open</button>
       </div>
 
-      <div class="card">
+      <div class="card" onclick="goTo('/src/calendar.html')">
         <h3>Scheduling</h3>
-        <p>Simple booking</p>
-        <button onclick="go('/src/calendar.html')">Open</button>
       </div>
     `;
   }
 
   if (plan === "pro") {
     el.innerHTML = `
-      <div class="card">
+      <div class="card" onclick="goTo('/src/ai.html')">
         <h3>AI Follow-Up</h3>
-        <p>Automated responses</p>
-        <button onclick="go('/src/ai.html')">Open</button>
       </div>
 
-      <div class="card">
+      <div class="card" onclick="goTo('/src/calendar.html')">
         <h3>Smart Scheduling</h3>
-        <p>Advanced calendar</p>
-        <button onclick="go('/src/calendar.html')">Open</button>
       </div>
 
-      <div class="card">
+      <div class="card" onclick="goTo('/src/listings.html')">
         <h3>Listings</h3>
-        <p>AI listing generator</p>
-        <button onclick="go('/src/listings.html')">Open</button>
       </div>
     `;
   }
 
   if (plan === "agency") {
     el.innerHTML = `
-      <div class="card">
-        <h3>Leads</h3>
-        <button onclick="go('/src/leads.html')">Open</button>
+      <div class="card" onclick="goTo('/src/ai.html')">
+        <h3>AI Suite</h3>
       </div>
 
-      <div class="card">
-        <h3>AI Tools</h3>
-        <button onclick="go('/src/ai.html')">Open</button>
+      <div class="card" onclick="goTo('/src/calendar.html')">
+        <h3>Scheduling</h3>
       </div>
 
-      <div class="card">
-        <h3>Listings</h3>
-        <button onclick="go('/src/listings.html')">Open</button>
+      <div class="card" onclick="goTo('/src/listings.html')">
+        <h3>Automation</h3>
       </div>
 
-      <div class="card">
-        <h3>Calendar</h3>
-        <button onclick="go('/src/calendar.html')">Open</button>
+      <div class="card" onclick="goTo('/src/leads.html')">
+        <h3>CRM</h3>
       </div>
     `;
   }
 }
 
-// 🔥 THIS WAS MISSING BEFORE
-window.go = (path) => {
+// 🔗 NAVIGATION
+window.goTo = (path) => {
   window.location.href = path;
 };
 
+// BILLING
 window.goToBilling = () => {
   window.location.href = "/src/payments.html";
 };
 
+// STRIPE PORTAL
 window.manageSubscription = async () => {
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -269,6 +250,7 @@ window.manageSubscription = async () => {
   }
 };
 
+// LOGOUT
 window.logout = async () => {
   await supabase.auth.signOut();
   window.location.href = "/src/login.html";
