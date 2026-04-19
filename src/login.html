@@ -6,9 +6,52 @@
 </head>
 <body>
   <h1>Login to PropAI Realty</h1>
+
   <form id="login-form">
-    <label>Email: <input type="email" name="email" required></label>
+    <label>Email: 
+      <input type="email" id="email" required>
+    </label>
     <button type="submit">Send Magic Link</button>
   </form>
+
+  <p id="status"></p>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const status = document.getElementById("status");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value;
+
+      status.textContent = "Sending email...";
+
+      try {
+        const res = await fetch("/.netlify/functions/sendEmail", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            toEmail: email,
+            bookingDetails: "Login magic link request",
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          status.textContent = "✅ Email sent!";
+        } else {
+          status.textContent = "❌ Failed: " + data.error;
+        }
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ Network error";
+      }
+    });
+  </script>
 </body>
 </html>
