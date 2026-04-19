@@ -8,60 +8,11 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-const supabase = createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-);
-
-async function checkAccess() {
-  const { data: { session } } = await supabase.auth.getSession();
-
-  // 🚫 NOT LOGGED IN
-  if (!session) {
-    window.location.href = "/src/login.html";
-    return;
-  }
-
-  const email = session.user.email;
-
-  // 🔍 CHECK SUBSCRIPTION
-  const { data, error } = await supabase
-    .from("users")
-    .select("subscription_status")
-    .eq("email", email)
-    .single();
-
-  console.log("User DB:", data);
-
-  // 🚫 NOT ACTIVE SUB
-  if (!data || data.subscription_status !== "active") {
-    window.location.href = "/src/payments.html";
-    return;
-  }
-
-  // ✅ USER IS GOOD → SHOW DASHBOARD
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("app").style.display = "block";
-}
-
-checkAccess();
-
-// LOGOUT
-window.logout = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "/src/login.html";
-};
-</script>
-
 <style>
 :root {
   --gold: #C9A84C;
   --navy: #0D1B2A;
   --cream: #FAF8F3;
-  --white: #ffffff;
 }
 
 body {
@@ -70,7 +21,7 @@ body {
   background: var(--cream);
 }
 
-/* LOADING SCREEN */
+/* LOADING */
 #loading {
   height: 100vh;
   display: flex;
@@ -115,7 +66,7 @@ nav {
   font-size: 40px;
 }
 
-/* DASHBOARD CONTENT */
+/* DASHBOARD */
 .dashboard {
   padding: 40px;
 }
@@ -133,9 +84,7 @@ nav {
 <body>
 
 <!-- LOADING -->
-<div id="loading">
-  Checking access...
-</div>
+<div id="loading">Checking access...</div>
 
 <!-- APP -->
 <div id="app" style="display:none;">
@@ -147,27 +96,108 @@ nav {
 
 <div class="hero">
   <h1>AI Automation for Real Estate</h1>
-  <p>Your full SaaS system is now live.</p>
+  <p id="planLabel"></p>
 </div>
 
-<div class="dashboard">
-  <div class="card">
-    <h2>Welcome</h2>
-    <p>Your automation dashboard will live here.</p>
-  </div>
-
-  <div class="card">
-    <h2>Leads</h2>
-    <p>Incoming leads will appear here.</p>
-  </div>
-
-  <div class="card">
-    <h2>Bookings</h2>
-    <p>Appointments + showings will appear here.</p>
-  </div>
-</div>
+<div class="dashboard" id="features"></div>
 
 </div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
+
+async function checkAccess() {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // 🚫 NOT LOGGED IN
+  if (!session) {
+    window.location.href = "/src/login.html";
+    return;
+  }
+
+  const email = session.user.email;
+
+  // 🔍 GET USER
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  console.log("User DB:", data);
+
+  // 🚨 USER DOESN’T EXIST → CREATE
+  if (!data) {
+    await supabase.from("users").insert([
+      {
+        email,
+        subscription_status: "inactive",
+        plan: "starter"
+      }
+    ]);
+
+    window.location.href = "/src/payments.html";
+    return;
+  }
+
+  // 🚫 NOT PAID
+  if (data.subscription_status !== "active") {
+    window.location.href = "/src/payments.html";
+    return;
+  }
+
+  // ✅ SHOW APP
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  document.getElementById("planLabel").innerText = 
+    "Current Plan: " + data.plan.toUpperCase();
+
+  renderFeatures(data.plan);
+}
+
+// 🎯 PLAN-BASED UI
+function renderFeatures(plan) {
+  const el = document.getElementById("features");
+
+  if (plan === "starter") {
+    el.innerHTML = `
+      <div class="card"><h2>Leads</h2><p>Basic lead tracking</p></div>
+      <div class="card"><h2>Bookings</h2><p>Basic scheduling</p></div>
+    `;
+  }
+
+  if (plan === "pro") {
+    el.innerHTML = `
+      <div class="card"><h2>Leads</h2><p>Advanced AI lead follow-up</p></div>
+      <div class="card"><h2>Bookings</h2><p>Smart scheduling system</p></div>
+      <div class="card"><h2>Automation</h2><p>Automated workflows</p></div>
+    `;
+  }
+
+  if (plan === "agency") {
+    el.innerHTML = `
+      <div class="card"><h2>Leads</h2><p>Full AI system</p></div>
+      <div class="card"><h2>Bookings</h2><p>Multi-agent scheduling</p></div>
+      <div class="card"><h2>Automation</h2><p>Advanced workflows</p></div>
+      <div class="card"><h2>White Label</h2><p>Custom branding + widgets</p></div>
+    `;
+  }
+}
+
+// LOGOUT
+window.logout = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "/src/login.html";
+};
+
+checkAccess();
+</script>
 
 </body>
 </html>
