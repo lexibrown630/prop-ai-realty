@@ -40,6 +40,7 @@ button {
   cursor: pointer;
   width: 100%;
   font-weight: bold;
+  margin-top: 10px;
 }
 
 .output {
@@ -51,7 +52,6 @@ button {
 }
 
 .cta {
-  margin-top: 15px;
   background: #0D1B2A;
   color: white;
 }
@@ -68,9 +68,17 @@ button {
 <div class="container">
   <h1>AI Follow-Up Generator</h1>
 
+  <!-- CLIENT INFO -->
   <label>Client Name</label>
   <input id="name" placeholder="John Smith">
 
+  <label>Client Email</label>
+  <input id="email" placeholder="john@email.com">
+
+  <label>Client Phone (optional)</label>
+  <input id="phone" placeholder="(555) 123-4567">
+
+  <!-- PROPERTY INFO -->
   <label>Property Type</label>
   <select id="type">
     <option>House</option>
@@ -83,18 +91,23 @@ button {
   <input id="location" placeholder="Miami, FL">
 
   <label>Key Features</label>
-  <input id="features" placeholder="3 bed, 2 bath, pool, waterfront">
+  <input id="features" placeholder="3 bed, 2 bath, pool">
 
   <label>Lead Situation</label>
-  <textarea id="situation" placeholder="Example: Asked for more info, wants a showing this weekend..."></textarea>
+  <textarea id="situation"></textarea>
 
   <button onclick="generate()">Generate Follow-Up</button>
 
   <div id="result" class="output" style="display:none;"></div>
 
+  <button id="sendBtn" style="display:none;" onclick="sendEmail()">
+    📧 Send to Client
+  </button>
+
   <button id="bookBtn" class="cta" style="display:none;" onclick="goToCalendar()">
     📅 Book Showing
   </button>
+
 </div>
 
 <script type="module">
@@ -105,24 +118,20 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-// 🔒 PROTECT PAGE
+// 🔒 AUTH
 const { data: { session } } = await supabase.auth.getSession();
 if (!session) {
   window.location.href = "/src/login.html";
 }
 
 // NAV
-window.goBack = () => {
-  window.location.href = "/index.html";
-};
+window.goBack = () => window.location.href = "/index.html";
+window.goToCalendar = () => window.location.href = "/src/calendar.html";
 
-window.goToCalendar = () => {
-  window.location.href = "/src/calendar.html";
-};
-
-// 🚀 REAL AI CALL
+// GENERATE AI
 window.generate = async () => {
   const name = document.getElementById("name").value || "there";
+  const email = document.getElementById("email").value;
   const type = document.getElementById("type").value;
   const location = document.getElementById("location").value;
   const features = document.getElementById("features").value;
@@ -134,42 +143,51 @@ Property: ${type}
 Location: ${location}
 Features: ${features}
 Situation: ${situation}
-
-Write a follow-up message that encourages booking a showing.
 `;
 
   const result = document.getElementById("result");
+  const sendBtn = document.getElementById("sendBtn");
   const bookBtn = document.getElementById("bookBtn");
 
   result.style.display = "block";
   result.innerText = "Generating...";
+  sendBtn.style.display = "none";
   bookBtn.style.display = "none";
 
-  try {
-    const res = await fetch("/.netlify/functions/chat", {
-      method: "POST",
-      body: JSON.stringify({
-        message,
-        type: "followup"
-      }),
-    });
+  const res = await fetch("/.netlify/functions/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, type: "followup" }),
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if (data.reply) {
-      result.innerText = data.reply;
+  result.innerText = data.reply || "Error generating";
 
-      // 🔥 SHOW BOOK BUTTON AFTER AI RESPONSE
-      bookBtn.style.display = "block";
+  sendBtn.style.display = "block";
+  bookBtn.style.display = "block";
+};
 
-    } else {
-      result.innerText = "Error generating response";
-      console.error(data);
-    }
+// SEND EMAIL
+window.sendEmail = async () => {
+  const email = document.getElementById("email").value;
+  const message = document.getElementById("result").innerText;
 
-  } catch (err) {
-    result.innerText = "Server error";
-    console.error(err);
+  if (!email) {
+    alert("Enter client email");
+    return;
+  }
+
+  const res = await fetch("/.netlify/functions/sendEmail", {
+    method: "POST",
+    body: JSON.stringify({ email, message }),
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert("✅ Email sent!");
+  } else {
+    alert("❌ Failed to send");
   }
 };
 </script>
