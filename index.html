@@ -110,8 +110,8 @@ nav {
   <div class="logo">PropAI</div>
 
   <div class="nav-buttons">
-    <button class="btn" onclick="goToBilling()">Upgrade</button>
-    <button class="btn" onclick="manageSubscription()">Manage</button>
+    <button id="upgradeBtn" class="btn" onclick="goToBilling()">Upgrade</button>
+    <button id="manageBtn" class="btn" onclick="manageSubscription()" style="display:none;">Manage</button>
     <button class="btn" onclick="logout()">Logout</button>
   </div>
 </nav>
@@ -143,12 +143,6 @@ async function checkAccess() {
 
   const email = session.user.email;
 
-  // 🔥 HANDLE RETURN FROM STRIPE
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("success") === "true") {
-    console.log("✅ Payment success return");
-  }
-
   const { data } = await supabase
     .from("users")
     .select("*")
@@ -156,6 +150,7 @@ async function checkAccess() {
 
   let user = data && data[0];
 
+  // CREATE USER IF MISSING
   if (!user) {
     await supabase.from("users").insert([
       {
@@ -169,18 +164,31 @@ async function checkAccess() {
     return;
   }
 
+  // HANDLE BUTTON STATES
+  const upgradeBtn = document.getElementById("upgradeBtn");
+  const manageBtn = document.getElementById("manageBtn");
+
+  if (user.subscription_status === "active") {
+    upgradeBtn.style.display = "none";
+    manageBtn.style.display = "inline-block";
+  } else {
+    manageBtn.style.display = "none";
+  }
+
+  // REDIRECT IF NOT ACTIVE
   if (user.subscription_status !== "active") {
     window.location.href = "/src/payments.html";
     return;
   }
 
+  // SHOW PLAN
   document.getElementById("planText").innerHTML =
     "Current Plan: <span class='plan'>" + user.plan.toUpperCase() + "</span>";
 
   renderFeatures(user.plan);
 }
 
-// 🎯 FEATURES
+// FEATURES
 function renderFeatures(plan) {
   const el = document.getElementById("features");
 
@@ -242,20 +250,18 @@ function renderFeatures(plan) {
   }
 }
 
-// 🔥 BILLING PAGE
+// BILLING PAGE
 window.goToBilling = () => {
   window.location.href = "/src/payments.html";
 };
 
-// 🔥 STRIPE PORTAL
+// STRIPE PORTAL
 window.manageSubscription = async () => {
   const { data: { session } } = await supabase.auth.getSession();
 
-  const email = session.user.email;
-
   const res = await fetch("/.netlify/functions/createPortal", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email: session.user.email }),
   });
 
   const data = await res.json();
