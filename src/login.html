@@ -1,48 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Login - PropAI Realty</title>
-</head>
-<body>
-  <h1>Login to PropAI Realty</h1>
+<meta charset="UTF-8">
+<title>Login - PropAI</title>
 
-  <form id="login-form">
-    <input type="email" id="email" placeholder="Enter your email" required />
-    <button type="submit">Send Magic Link</button>
-  </form>
+<style>
+body {
+  font-family: Arial;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.box {
+  text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h1>Login</h1>
+
+  <input type="email" id="email" placeholder="Enter your email" />
+  <br><br>
+  <button onclick="login()">Send Magic Link</button>
 
   <p id="status"></p>
+</div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    const supabase = createClient(
-      "https://jrmqdojsxjtkjpczaysp.supabase.co",
-      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-    );
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
 
-    const form = document.getElementById("login-form");
-    const status = document.getElementById("status");
+window.login = async () => {
+  const email = document.getElementById("email").value;
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: "https://prop-ai-realty.netlify.app/index.html"
+    }
+  });
 
-      const email = document.getElementById("email").value;
+  if (error) {
+    document.getElementById("status").innerText = "❌ " + error.message;
+  } else {
+    document.getElementById("status").innerText = "✅ Check your email";
+  }
+};
+</script>
 
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: "https://prop-ai-realty.netlify.app/src/router.html"
-        }
-      });
-
-      if (error) {
-        status.innerText = "❌ Error sending email";
-      } else {
-        status.innerText = "✅ Magic link sent. Check your email.";
-      }
-    });
-  </script>
 </body>
 </html>
