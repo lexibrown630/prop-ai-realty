@@ -1,9 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Loading...</title>
+  <meta charset="UTF-8">
+  <title>Routing...</title>
 </head>
 <body>
-  <script type="module" src="./router.js"></script>
+  <h2>Logging you in...</h2>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient(
+      "https://jrmqdojsxjtkjpczaysp.supabase.co",
+      "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+    );
+
+    async function handleAuth() {
+      // 🔥 This is the critical fix
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error(error);
+        document.body.innerHTML = "❌ Error logging in";
+        return;
+      }
+
+      if (!data.session) {
+        document.body.innerHTML = "❌ No session found. Try logging in again.";
+        return;
+      }
+
+      const user = data.session.user;
+      const email = user.email;
+
+      // Check access via your Netlify function
+      const res = await fetch("/.netlify/functions/checkAccess", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await res.json();
+
+      if (!result.access) {
+        window.location.href = "/src/payments.html";
+      } else {
+        window.location.href = "/index.html";
+      }
+    }
+
+    handleAuth();
+  </script>
 </body>
 </html>
