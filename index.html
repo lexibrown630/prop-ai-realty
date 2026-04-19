@@ -29,7 +29,7 @@ nav {
   cursor:pointer;
   font-size:13px;
 }
-.nav-tabs button.active { color:var(--gold); }
+.nav-tabs button:hover { color:white; }
 
 .panel { display:none; padding:30px; max-width:1100px; margin:auto; }
 .panel.active { display:block; }
@@ -84,7 +84,6 @@ nav {
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
 
-    <!-- NAV FIXED -->
     <button onclick="goLogin()">Login</button>
     <button onclick="goPricing()">Pricing</button>
   </div>
@@ -136,37 +135,38 @@ nav {
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* 🚨 HIDE PAGE IMMEDIATELY */
+/* 🚨 HIDE PAGE FIRST (prevents flash) */
 document.documentElement.style.display = "none";
 
+/* 🔗 SUPABASE */
 const supabase = createClient(
   "https://jrmqdojsxjtkjpczaysp.supabase.co",
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* 🔐 RELIABLE AUTH CHECK */
+/* 🔐 AUTH GATE */
 async function enforceAuth() {
   try {
-    // 🔥 THIS IS THE FIX — wait for real session
     const { data: { session } } = await supabase.auth.getSession();
 
+    console.log("SESSION:", session); // optional debug
+
     if (!session || !session.user) {
-      window.location.replace("/login.html");
+      window.location.href = "/login.html";
       return;
     }
 
-    // ✅ user confirmed → show app
     document.documentElement.style.display = "block";
 
   } catch (err) {
     console.error("Auth error:", err);
-    window.location.replace("/login.html");
+    window.location.href = "/login.html";
   }
 }
 
 await enforceAuth();
 
-/* NAV */
+/* NAVIGATION */
 window.goLogin = () => window.location.href = "/login.html";
 window.goPricing = () => window.location.href = "/payments.html";
 
@@ -202,7 +202,7 @@ window.sendChat = async function(){
   appendMsg(data.reply || 'Error','bot');
 }
 
-/* FOLLOWUP */
+/* FOLLOW-UP */
 window.generateFollowUp = async function(){
   const name=document.getElementById('lead-name').value;
 
@@ -236,7 +236,7 @@ window.generateListing = async function(){
   document.getElementById('listing-content').innerText=data.reply;
 }
 
-/* SUCCESS MESSAGE */
+/* SUCCESS HANDLER */
 window.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
 
