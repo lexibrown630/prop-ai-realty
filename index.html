@@ -6,230 +6,209 @@
 
 <title>PropAI Dashboard</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-
 <style>
-:root {
-  --gold: #C9A84C;
-  --navy: #0D1B2A;
-  --cream: #FAF8F3;
-}
-
 body {
   margin: 0;
-  font-family: 'DM Sans', sans-serif;
-  background: var(--cream);
+  font-family: Arial;
+  background: #f5f5f5;
 }
 
+/* NAV */
 nav {
-  background: var(--navy);
-  padding: 16px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo {
-  color: var(--gold);
-  font-family: 'Playfair Display', serif;
-  font-size: 22px;
-}
-
-.nav-buttons {
+  background: #0D1B2A;
+  color: white;
+  padding: 15px;
   display: flex;
   gap: 10px;
 }
 
-.btn {
-  background: var(--gold);
-  border: none;
-  padding: 8px 14px;
+.nav-tab {
   cursor: pointer;
-  font-weight: bold;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 5px;
 }
 
-.hero {
-  background: var(--navy);
-  color: white;
-  padding: 60px 20px;
-  text-align: center;
-}
-
-.hero h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: 42px;
-}
-
-.plan {
-  display: inline-block;
-  background: var(--gold);
+.nav-tab.active {
+  background: #C9A84C;
   color: black;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  margin-top: 10px;
 }
 
-.dashboard {
-  max-width: 1100px;
-  margin: auto;
-  padding: 30px;
+/* PANELS */
+.panel {
+  display: none;
+  padding: 20px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+.panel.active {
+  display: block;
 }
 
-.card {
+/* CHAT */
+#chat-messages {
+  height: 300px;
+  overflow-y: auto;
   background: white;
-  padding: 25px;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  cursor: pointer;
-  transition: 0.2s;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
 }
 
-.card:hover {
-  transform: translateY(-5px);
+.msg {
+  margin-bottom: 10px;
+}
+
+.user {
+  text-align: right;
+}
+
+.bot {
+  text-align: left;
+}
+
+/* INPUTS */
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+button {
+  padding: 10px;
+  background: #C9A84C;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* RESULT BOXES */
+.result {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  white-space: pre-wrap;
 }
 </style>
 </head>
 
 <body>
 
+<!-- NAV -->
 <nav>
-  <div class="logo">PropAI</div>
-
-  <div class="nav-buttons">
-    <button id="upgradeBtn" class="btn" onclick="goToBilling()">Upgrade</button>
-    <button id="manageBtn" class="btn" onclick="manageSubscription()" style="display:none;">Manage</button>
-    <button class="btn" onclick="logout()">Logout</button>
-  </div>
+  <div class="nav-tab active" onclick="showPanel('tools')">Chat</div>
+  <div class="nav-tab" onclick="showPanel('followup')">Follow-Up</div>
+  <div class="nav-tab" onclick="showPanel('listing')">Listings</div>
+  <div class="nav-tab" onclick="showPanel('booking')">Booking</div>
 </nav>
 
-<div class="hero">
-  <h1>Your AI Real Estate Dashboard</h1>
-  <p id="planText">Loading...</p>
+<!-- ================= CHAT ================= -->
+<div id="panel-tools" class="panel active">
+  <h2>AI Assistant</h2>
+
+  <div id="chat-messages"></div>
+
+  <input id="chat-input" placeholder="Ask about properties or book a showing..." />
+  <button onclick="sendChat()">Send</button>
 </div>
 
-<div class="dashboard">
-  <div id="features" class="grid"></div>
+<!-- ================= FOLLOW-UP ================= -->
+<div id="panel-followup" class="panel">
+  <h2>Follow-Up Generator</h2>
+
+  <input id="lead-name" placeholder="Client Name">
+  <input id="lead-contact" placeholder="Email or Phone">
+  <input id="lead-source" placeholder="Lead Source (Zillow, Website)">
+  <input id="lead-type" placeholder="Buyer / Seller">
+  <textarea id="lead-notes" placeholder="Notes"></textarea>
+
+  <button id="followup-btn" onclick="generateFollowUp()">Generate Follow-Up</button>
+
+  <div class="result">
+    <strong>Email:</strong>
+    <div id="email-content"></div>
+  </div>
+
+  <div class="result">
+    <strong>SMS:</strong>
+    <div id="sms-content"></div>
+  </div>
 </div>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+<!-- ================= LISTINGS ================= -->
+<div id="panel-listing" class="panel">
+  <h2>Listing Generator</h2>
 
-const supabase = createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-);
+  <input id="prop-address" placeholder="Address">
+  <input id="prop-beds" placeholder="Beds/Baths">
+  <input id="prop-sqft" placeholder="Square Feet">
+  <input id="prop-price" placeholder="Price">
+  <input id="prop-year" placeholder="Year Built">
+  <input id="prop-features" placeholder="Key Features">
+  <input id="prop-tone" placeholder="Tone (Luxury, Casual, etc)">
 
-// 🔐 AUTH CHECK
-async function checkAccess() {
-  const { data: { session } } = await supabase.auth.getSession();
+  <button id="listing-btn" onclick="generateListing()">Generate Listing</button>
 
-  if (!session) {
-    window.location.href = "/src/login.html";
-    return;
-  }
+  <div class="result">
+    <div id="listing-content"></div>
+  </div>
+</div>
 
-  const email = session.user.email;
+<!-- ================= BOOKING ================= -->
+<div id="panel-booking" class="panel">
+  <h2>Book a Showing</h2>
 
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email);
+  <button onclick="getSlots()">Get Available Times</button>
 
-  const user = data && data[0];
+  <div id="slots" style="margin-top:15px;"></div>
+</div>
 
-  if (!user) {
-    window.location.href = "/src/payments.html";
-    return;
-  }
+<!-- ================= CONNECT SCRIPT ================= -->
+<script src="/script.js"></script>
 
-  const upgradeBtn = document.getElementById("upgradeBtn");
-  const manageBtn = document.getElementById("manageBtn");
+<script>
+/* ================= BOOKING ================= */
 
-  if (user.subscription_status === "active") {
-    upgradeBtn.style.display = "none";
-    manageBtn.style.display = "inline-block";
-  } else {
-    manageBtn.style.display = "none";
-    window.location.href = "/src/payments.html";
-    return;
-  }
-
-  document.getElementById("planText").innerHTML =
-    "Current Plan: <span class='plan'>" + user.plan.toUpperCase() + "</span>";
-
-  renderFeatures();
-}
-
-// 🚀 CONNECT TO YOUR REAL FILES
-function renderFeatures() {
-  const el = document.getElementById("features");
-
-  el.innerHTML = `
-    <div class="card" onclick="goToPage('ai.html')">
-      <h3>AI Follow-Up</h3>
-      <p>Generate responses</p>
-    </div>
-
-    <div class="card" onclick="goToPage('calendar.html')">
-      <h3>Scheduling</h3>
-      <p>Book showings</p>
-    </div>
-
-    <div class="card" onclick="goToPage('listings.html')">
-      <h3>Listings</h3>
-      <p>Create listings</p>
-    </div>
-
-    <div class="card" onclick="goToPage('leads.html')">
-      <h3>Leads</h3>
-      <p>Manage clients</p>
-    </div>
-  `;
-}
-
-// 🔥 FIXED NAVIGATION (THIS WAS YOUR ISSUE)
-window.goToPage = (file) => {
-  window.location.href = "/src/" + file;
-};
-
-// 💳 BILLING
-window.goToBilling = () => {
-  window.location.href = "/src/payments.html";
-};
-
-// 💳 STRIPE PORTAL
-window.manageSubscription = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-
-  const res = await fetch("/.netlify/functions/createPortal", {
-    method: "POST",
-    body: JSON.stringify({ email: session.user.email }),
+async function getSlots() {
+  const res = await fetch('/.netlify/functions/booking', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: "suggest" })
   });
 
   const data = await res.json();
+  const container = document.getElementById('slots');
+  container.innerHTML = "";
 
-  if (data.url) {
-    window.location.href = data.url;
-  } else {
-    alert("Error opening portal");
+  if (!data.suggestions) {
+    container.innerText = "No availability found";
+    return;
   }
-};
 
-// 🚪 LOGOUT
-window.logout = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "/src/login.html";
-};
+  data.suggestions.forEach(slot => {
+    const btn = document.createElement('button');
+    const time = new Date(slot.start).toLocaleString();
 
-checkAccess();
+    btn.innerText = time;
+
+    btn.onclick = async () => {
+      await fetch('/.netlify/functions/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: "book",
+          startTime: slot.start,
+          endTime: slot.end,
+          title: "Property Showing",
+          email: "test@test.com" // can replace later
+        })
+      });
+
+      alert("Booking confirmed");
+    };
+
+    container.appendChild(btn);
+  });
+}
 </script>
 
 </body>
