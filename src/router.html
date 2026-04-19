@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Routing...</title>
+  <title>Routing - PropAI Realty</title>
 </head>
 <body>
   <h2>Logging you in...</h2>
@@ -15,43 +15,47 @@
       "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
     );
 
-    async function handleAuth() {
-      // 🔥 This is the critical fix
+    async function handleLogin() {
+      // 🔑 This is the KEY FIX
       const { data, error } = await supabase.auth.getSession();
 
       if (error) {
-        console.error(error);
-        document.body.innerHTML = "❌ Error logging in";
+        console.error("Auth error:", error);
+      }
+
+      const session = data.session;
+
+      if (!session) {
+        console.log("No session found, redirecting to login...");
+        window.location.href = "/src/login.html";
         return;
       }
 
-      if (!data.session) {
-        document.body.innerHTML = "❌ No session found. Try logging in again.";
-        return;
-      }
+      const email = session.user.email;
 
-      const user = data.session.user;
-      const email = user.email;
+      console.log("User logged in:", email);
 
-      // Check access via your Netlify function
+      // 🔐 Check paid access
       const res = await fetch("/.netlify/functions/checkAccess", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email })
       });
 
       const result = await res.json();
 
       if (!result.access) {
         window.location.href = "/src/payments.html";
-      } else {
-        window.location.href = "/index.html";
+        return;
       }
+
+      // ✅ SUCCESS → go to app
+      window.location.href = "/index.html";
     }
 
-    handleAuth();
+    handleLogin();
   </script>
 </body>
 </html>
