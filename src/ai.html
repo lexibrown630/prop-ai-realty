@@ -26,19 +26,19 @@ nav {
   margin: auto;
 }
 
-textarea {
+input, textarea, select {
   width: 100%;
-  height: 120px;
   padding: 10px;
   margin-top: 10px;
+  margin-bottom: 15px;
 }
 
 button {
-  margin-top: 15px;
   padding: 10px;
   background: #C9A84C;
   border: none;
   cursor: pointer;
+  width: 100%;
 }
 
 .output {
@@ -46,6 +46,7 @@ button {
   padding: 15px;
   margin-top: 20px;
   border-radius: 8px;
+  white-space: pre-line;
 }
 </style>
 </head>
@@ -60,11 +61,27 @@ button {
 <div class="container">
   <h1>AI Follow-Up Generator</h1>
 
-  <p>Enter a lead message or situation:</p>
+  <label>Client Name</label>
+  <input id="name" placeholder="John Smith">
 
-  <textarea id="input" placeholder="Example: New Zillow lead asking about a 3 bed home..."></textarea>
+  <label>Property Type</label>
+  <select id="type">
+    <option>House</option>
+    <option>Condo</option>
+    <option>Townhome</option>
+    <option>Apartment</option>
+  </select>
 
-  <button onclick="generate()">Generate Response</button>
+  <label>Location</label>
+  <input id="location" placeholder="Miami, FL">
+
+  <label>Key Features</label>
+  <input id="features" placeholder="3 bed, 2 bath, pool, waterfront">
+
+  <label>Lead Situation</label>
+  <textarea id="situation" placeholder="Example: Asked for more info, wants a showing this weekend..."></textarea>
+
+  <button onclick="generate()">Generate Follow-Up</button>
 
   <div id="result" class="output" style="display:none;"></div>
 </div>
@@ -79,7 +96,6 @@ const supabase = createClient(
 
 // 🔒 PROTECT PAGE
 const { data: { session } } = await supabase.auth.getSession();
-
 if (!session) {
   window.location.href = "/src/login.html";
 }
@@ -89,21 +105,29 @@ window.goBack = () => {
   window.location.href = "/index.html";
 };
 
-// 🚀 FAKE AI (for now)
+// 🚀 SMARTER RESPONSE
 window.generate = () => {
-  const input = document.getElementById("input").value;
-
-  if (!input) {
-    alert("Enter something first");
-    return;
-  }
+  const name = document.getElementById("name").value || "there";
+  const type = document.getElementById("type").value;
+  const location = document.getElementById("location").value;
+  const features = document.getElementById("features").value;
+  const situation = document.getElementById("situation").value;
 
   const response = `
-Hi there! Thanks for reaching out about this property.
+Hi ${name},
 
-I'd be happy to help you schedule a showing or provide more details. Let me know what time works best for you, and I’ll get everything set up.
+Thanks for reaching out about the ${type} in ${location}!
 
-Looking forward to connecting!
+This property features ${features}, and it’s a great opportunity based on what you’re looking for.
+
+${situation ? "I understand your situation: " + situation : ""}
+
+I’d be happy to get you more details or schedule a showing at a time that works for you.
+
+Let me know what your availability looks like!
+
+Best,
+Your Agent
   `;
 
   const result = document.getElementById("result");
