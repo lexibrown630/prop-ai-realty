@@ -65,19 +65,19 @@ button {
   <div class="card">
     <h2>Starter</h2>
     <div class="price">$79/mo</div>
-    <button onclick="checkout('price_1TN45MRqy7IFyseNJtzPtgVC')">Select</button>
+    <button onclick="checkout(this, 'price_1TN45MRqy7IFyseNJtzPtgVC')">Select</button>
   </div>
 
   <div class="card">
     <h2>Pro</h2>
     <div class="price">$149/mo</div>
-    <button onclick="checkout('price_1TN46TRqy7IFyseNHEiBa8xe')">Select</button>
+    <button onclick="checkout(this, 'price_1TN46TRqy7IFyseNHEiBa8xe')">Select</button>
   </div>
 
   <div class="card">
     <h2>Agency</h2>
     <div class="price">$349/mo</div>
-    <button onclick="checkout('price_1TN47TRqy7IFyseNqnUSkEoO')">Select</button>
+    <button onclick="checkout(this, 'price_1TN47TRqy7IFyseNqnUSkEoO')">Select</button>
   </div>
 
 </div>
@@ -90,26 +90,28 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-async function checkout(priceId) {
+async function checkout(button, priceId) {
   try {
-    // 🔥 GET LOGGED-IN USER
-    const { data: { session } } = await supabase.auth.getSession();
+    button.innerText = "Loading...";
+    button.disabled = true;
 
-    console.log("SESSION:", session);
+    // ✅ Get current user
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session || !session.user) {
-      alert("You must be logged in");
-      window.location.href = "/src/login.html";
+    if (!user || !user.email) {
+      alert("You must be logged in first.");
+      window.location.href = "/login.html";
       return;
     }
 
-    const email = session.user.email;
+    const email = user.email;
 
-    console.log("EMAIL:", email);
-
-    // 🔥 CALL BACKEND
+    // ✅ Call Netlify function
     const res = await fetch("/.netlify/functions/createCheckout", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         priceId,
         email
@@ -121,18 +123,20 @@ async function checkout(priceId) {
     console.log("CHECKOUT RESPONSE:", data);
 
     if (data.url) {
-      window.location.href = data.url;
+      window.location.href = data.url; // 🚀 Stripe redirect
     } else {
-      alert("❌ No checkout URL returned");
+      throw new Error(data.error || "No checkout URL returned");
     }
 
   } catch (err) {
     console.error("CHECKOUT ERROR:", err);
-    alert("Something went wrong");
+    alert(err.message || "Something went wrong");
+    button.innerText = "Select";
+    button.disabled = false;
   }
 }
 
-// 👇 MAKE BUTTONS WORK
+// expose to buttons
 window.checkout = checkout;
 </script>
 
