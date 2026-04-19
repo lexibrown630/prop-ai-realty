@@ -1,177 +1,181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PropAI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>PropAI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0D1B2A;
+      color: white;
+    }
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #f5f5f5;
-}
+    .nav {
+      display: flex;
+      background: #111;
+    }
 
-/* NAV */
-nav {
-  background: #0D1B2A;
-  color: white;
-  padding: 15px;
-  display: flex;
-  gap: 15px;
-}
+    .nav-tab {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
 
-.nav-tab {
-  cursor: pointer;
-  opacity: 0.7;
-}
+    .nav-tab.active {
+      border-bottom: 2px solid #C9A84C;
+    }
 
-.nav-tab.active {
-  opacity: 1;
-  font-weight: bold;
-}
+    .panel {
+      display: none;
+      padding: 20px;
+    }
 
-/* PANELS */
-.panel {
-  display: none;
-  padding: 20px;
-}
+    .panel.active {
+      display: block;
+    }
 
-.panel.active {
-  display: block;
-}
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
 
-/* CHAT */
-#chat-messages {
-  height: 300px;
-  overflow-y: auto;
-  background: white;
-  padding: 10px;
-  margin-bottom: 10px;
-}
+    button {
+      padding: 10px;
+      background: #C9A84C;
+      border: none;
+      margin-top: 10px;
+      cursor: pointer;
+    }
 
-.msg {
-  margin: 5px 0;
-}
+    #chat-messages {
+      height: 300px;
+      overflow-y: auto;
+      background: #222;
+      padding: 10px;
+    }
 
-.msg.user {
-  text-align: right;
-}
+    .msg {
+      margin: 5px 0;
+    }
 
-.msg.bot {
-  text-align: left;
-}
-
-/* BUTTONS */
-button {
-  padding: 10px;
-  margin-top: 10px;
-  cursor: pointer;
-}
-</style>
+    .user { color: #C9A84C; }
+    .bot { color: white; }
+  </style>
 </head>
 
 <body>
 
 <!-- NAV -->
-<nav>
+<div class="nav">
   <div class="nav-tab active" onclick="showPanel('tools')">Chat</div>
   <div class="nav-tab" onclick="showPanel('followup')">Follow-Up</div>
   <div class="nav-tab" onclick="showPanel('listing')">Listings</div>
   <div class="nav-tab" onclick="showPanel('booking')">Booking</div>
-  <div class="nav-tab" onclick="showPanel('embed')">Embed</div>
-</nav>
+</div>
 
-<!-- =========================
-CHAT PANEL (YOUR ORIGINAL AI)
-========================= -->
+<!-- CHAT -->
 <div id="panel-tools" class="panel active">
-  <h2>AI Assistant</h2>
-
+  <h2>AI Chat</h2>
   <div id="chat-messages"></div>
-
-  <input id="chat-input" placeholder="Ask about a property or book a showing..." />
+  <input id="chat-input" placeholder="Ask about a property..." />
   <button onclick="sendChat()">Send</button>
 </div>
 
-<!-- =========================
-FOLLOW UP PANEL
-========================= -->
+<!-- FOLLOW UP -->
 <div id="panel-followup" class="panel">
   <h2>Follow-Up Generator</h2>
 
-  <input id="lead-name" placeholder="Client name" />
-  <input id="lead-contact" placeholder="Email or phone" />
-  <input id="lead-source" placeholder="Zillow, website, etc" />
-  <input id="lead-type" placeholder="Buyer / Seller" />
-  <textarea id="lead-notes" placeholder="Notes..."></textarea>
+  <input id="lead-name" placeholder="Name">
+  <input id="lead-contact" placeholder="Email or Phone">
+  <input id="lead-source" placeholder="Zillow, Facebook, etc">
+  <input id="lead-type" placeholder="Buyer / Seller">
+  <textarea id="lead-notes" placeholder="Notes"></textarea>
 
   <button id="followup-btn" onclick="generateFollowUp()">Generate</button>
 
   <h3>Email</h3>
-  <div id="email-result"><pre id="email-content"></pre></div>
+  <div id="email-content"></div>
 
   <h3>SMS</h3>
-  <div id="sms-result"><pre id="sms-content"></pre></div>
+  <div id="sms-content"></div>
 </div>
 
-<!-- =========================
-LISTINGS PANEL
-========================= -->
+<!-- LISTINGS -->
 <div id="panel-listing" class="panel">
   <h2>Listing Generator</h2>
 
-  <input id="prop-address" placeholder="Address" />
-  <input id="prop-beds" placeholder="Beds/Baths" />
-  <input id="prop-sqft" placeholder="Sqft" />
-  <input id="prop-price" placeholder="Price" />
-  <input id="prop-year" placeholder="Year built" />
-  <input id="prop-features" placeholder="Features" />
-  <input id="prop-tone" placeholder="Luxury, modern..." />
+  <input id="prop-address" placeholder="Address">
+  <input id="prop-beds" placeholder="Beds/Baths">
+  <input id="prop-sqft" placeholder="Sqft">
+  <input id="prop-price" placeholder="Price">
+  <input id="prop-year" placeholder="Year Built">
+  <textarea id="prop-features" placeholder="Features"></textarea>
 
-  <button id="listing-btn" onclick="generateListing()">Generate Listing</button>
+  <button id="listing-btn" onclick="generateListing()">Generate</button>
 
-  <div id="listing-result">
-    <pre id="listing-content"></pre>
-  </div>
+  <div id="listing-content"></div>
 </div>
 
-<!-- =========================
-BOOKING PANEL
-========================= -->
+<!-- BOOKING -->
 <div id="panel-booking" class="panel">
   <h2>Booking</h2>
 
-  <p>Select a time slot:</p>
+  <input id="booking-email" placeholder="Client Email">
+  <input id="booking-time" placeholder="ISO Time (2026-04-20T14:00:00)">
 
-  <button class="slot-btn" onclick="selectSlot(this, '9:00 AM')">9:00 AM</button>
-  <button class="slot-btn" onclick="selectSlot(this, '11:00 AM')">11:00 AM</button>
-  <button class="slot-btn" onclick="selectSlot(this, '2:00 PM')">2:00 PM</button>
+  <button onclick="bookNow()">Book Showing</button>
 
-  <div id="booking-confirm">
-    <button onclick="alert('Booking confirmed (connect to booking.js next)')">
-      Confirm Booking
-    </button>
-  </div>
+  <div id="booking-result"></div>
 </div>
 
-<!-- =========================
-EMBED PANEL
-========================= -->
-<div id="panel-embed" class="panel">
-  <h2>Embed</h2>
+<!-- LOGIN PROTECTION -->
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-  <input id="agency-name" placeholder="Agency name" />
-  <input id="primary-color" placeholder="#C9A84C" />
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
 
-  <button onclick="updateEmbedCode()">Generate Code</button>
+const { data: { session } } = await supabase.auth.getSession();
 
-  <pre id="embed-code-block"></pre>
-</div>
+if (!session) {
+  window.location.href = "/src/login.html";
+}
+</script>
 
-<!-- YOUR ORIGINAL SCRIPT -->
+<!-- YOUR ORIGINAL LOGIC -->
 <script src="/script.js"></script>
+
+<!-- BOOKING CONNECT -->
+<script>
+async function bookNow() {
+  const email = document.getElementById("booking-email").value;
+  const start = document.getElementById("booking-time").value;
+
+  const end = new Date(new Date(start).getTime() + 30*60000).toISOString();
+
+  const res = await fetch("/.netlify/functions/booking", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      startTime: start,
+      endTime: end,
+      title: "Property Showing"
+    })
+  });
+
+  const data = await res.json();
+
+  document.getElementById("booking-result").innerText =
+    data.success ? "Booked ✅" : data.error;
+}
+</script>
 
 </body>
 </html>
