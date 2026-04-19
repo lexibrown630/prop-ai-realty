@@ -127,7 +127,7 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-// 🔐 AUTH + ACCESS CONTROL
+// 🔐 AUTH CHECK
 async function checkAccess() {
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -138,7 +138,7 @@ async function checkAccess() {
 
   const email = session.user.email;
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("users")
     .select("*")
     .eq("email", email);
@@ -168,52 +168,49 @@ async function checkAccess() {
   renderFeatures();
 }
 
-// 🚀 DASHBOARD FEATURES (ALL CONNECTED)
+// 🚀 CONNECT TO YOUR REAL FILES
 function renderFeatures() {
   const el = document.getElementById("features");
 
   el.innerHTML = `
-    <div class="card" onclick="goTo('/src/ai.html')">
+    <div class="card" onclick="goToPage('ai.html')">
       <h3>AI Follow-Up</h3>
-      <p>Generate AI responses & automate follow-ups</p>
+      <p>Generate responses</p>
     </div>
 
-    <div class="card" onclick="goTo('/src/calendar.html')">
+    <div class="card" onclick="goToPage('calendar.html')">
       <h3>Scheduling</h3>
-      <p>Book showings & manage calendar</p>
+      <p>Book showings</p>
     </div>
 
-    <div class="card" onclick="goTo('/src/listings.html')">
+    <div class="card" onclick="goToPage('listings.html')">
       <h3>Listings</h3>
-      <p>Create high-converting property listings</p>
+      <p>Create listings</p>
     </div>
 
-    <div class="card" onclick="goTo('/src/leads.html')">
+    <div class="card" onclick="goToPage('leads.html')">
       <h3>Leads</h3>
-      <p>Track and manage your clients</p>
+      <p>Manage clients</p>
     </div>
   `;
 }
 
-// 🔗 NAVIGATION
-window.goTo = (path) => {
-  window.location.href = path;
+// 🔥 FIXED NAVIGATION (THIS WAS YOUR ISSUE)
+window.goToPage = (file) => {
+  window.location.href = "/src/" + file;
 };
 
-// 💳 BILLING PAGE
+// 💳 BILLING
 window.goToBilling = () => {
   window.location.href = "/src/payments.html";
 };
 
-// 💳 STRIPE CUSTOMER PORTAL
+// 💳 STRIPE PORTAL
 window.manageSubscription = async () => {
   const { data: { session } } = await supabase.auth.getSession();
 
   const res = await fetch("/.netlify/functions/createPortal", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
     body: JSON.stringify({ email: session.user.email }),
   });
 
@@ -222,8 +219,7 @@ window.manageSubscription = async () => {
   if (data.url) {
     window.location.href = data.url;
   } else {
-    alert("Error opening billing portal");
-    console.error(data);
+    alert("Error opening portal");
   }
 };
 
@@ -233,7 +229,6 @@ window.logout = async () => {
   window.location.href = "/src/login.html";
 };
 
-// INIT
 checkAccess();
 </script>
 
