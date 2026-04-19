@@ -12,17 +12,12 @@ export async function handler(event) {
       },
     });
 
-    // For now: hardcode email to TEST
-    const toEmail = "airealty.agency26@gmail.com";
-
-    const mailOptions = {
+    const info = await transporter.sendMail({
       from: `"PropAI Bookings" <${process.env.GMAIL_USER}>`,
-      to: toEmail,
+      to: "airealty.agency26@gmail.com",
       subject: "TEST EMAIL",
       text: "Your email system is working ✅",
-    };
-
-    const info = await transporter.sendMail(mailOptions);
+    });
 
     console.log("Email sent:", info.messageId);
 
