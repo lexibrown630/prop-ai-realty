@@ -90,7 +90,7 @@ window.login = async () => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: "https://prop-ai-realty.netlify.app/index.html"
+      emailRedirectTo: "https://prop-ai-realty.netlify.app/payments.html"
     }
   });
 
