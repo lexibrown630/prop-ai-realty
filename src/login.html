@@ -31,17 +31,16 @@
       const email = document.getElementById("email").value;
 
       const { error } = await supabase.auth.signInWithOtp({
-        email: email,
+        email,
         options: {
           emailRedirectTo: "https://prop-ai-realty.netlify.app/src/router.html"
         }
       });
 
       if (error) {
-        status.textContent = "❌ Error sending link";
-        console.error(error);
+        status.innerText = "❌ Error sending email";
       } else {
-        status.textContent = "✅ Magic link sent! Check your email.";
+        status.innerText = "✅ Magic link sent. Check your email.";
       }
     });
   </script>
