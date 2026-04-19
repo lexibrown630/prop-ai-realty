@@ -8,10 +8,7 @@
   <h1>Login to PropAI Realty</h1>
 
   <form id="login-form">
-    <label>
-      Email:
-      <input type="email" id="email" required>
-    </label>
+    <input type="email" id="email" placeholder="Enter your email" required />
     <button type="submit">Send Magic Link</button>
   </form>
 
@@ -20,7 +17,6 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    // Supabase config
     const supabase = createClient(
       "https://jrmqdojsxjtkjpczaysp.supabase.co",
       "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
@@ -34,8 +30,6 @@
 
       const email = document.getElementById("email").value;
 
-      status.textContent = "Sending magic link...";
-
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
@@ -44,10 +38,10 @@
       });
 
       if (error) {
+        status.textContent = "❌ Error sending link";
         console.error(error);
-        status.textContent = "❌ " + error.message;
       } else {
-        status.textContent = "✅ Check your email for your login link";
+        status.textContent = "✅ Magic link sent! Check your email.";
       }
     });
   </script>
