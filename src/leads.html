@@ -1,10 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leads</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #f5f5f5;
+}
+
+nav {
+  background: #0D1B2A;
+  color: white;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+button {
+  background: #C9A84C;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.container {
+  padding: 30px;
+}
+</style>
 </head>
+
 <body>
-<h1>Leads Dashboard</h1>
-<p>This is your leads system.</p>
+
+<nav>
+  <div>PropAI</div>
+  <button onclick="goBack()">Dashboard</button>
+</nav>
+
+<div class="container">
+  <h1>Leads</h1>
+  <p>This is your leads system.</p>
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
+
+// 🔒 PROTECT PAGE
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  window.location.href = "/src/login.html";
+}
+
+// NAV BACK
+window.goBack = () => {
+  window.location.href = "/index.html";
+};
+</script>
+
 </body>
 </html>
