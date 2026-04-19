@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-/* === KEEPING YOUR ORIGINAL DESIGN === */
 :root {
   --gold:#C9A84C; --navy:#0D1B2A; --cream:#FAF8F3;
 }
@@ -37,7 +36,6 @@ nav {
 .panel { display:none; padding:30px; max-width:1100px; margin:auto; }
 .panel.active { display:block; }
 
-/* HERO */
 .hero {
   background:var(--navy);
   color:white;
@@ -46,7 +44,6 @@ nav {
   margin-bottom:20px;
 }
 
-/* CARDS */
 .card {
   background:white;
   border-radius:16px;
@@ -55,7 +52,6 @@ nav {
   border:1px solid #eee;
 }
 
-/* CHAT */
 .chat-box {
   height:300px;
   overflow:auto;
@@ -68,7 +64,6 @@ nav {
 .msg.user { text-align:right; }
 .msg.bot { text-align:left; }
 
-/* BUTTONS */
 .btn {
   background:var(--gold);
   border:none;
@@ -89,6 +84,8 @@ nav {
     <button onclick="showPanel('followup')">Follow-Up</button>
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
+    <button onclick="window.location.href='/login.html'">Login</button>
+    <button onclick="window.location.href='/src/payments.html'">Pricing</button>
     <button onclick="upgrade()">Upgrade</button>
     <button onclick="billing()">Billing</button>
   </div>
@@ -96,13 +93,11 @@ nav {
 
 <main>
 
-<!-- HERO -->
 <div class="hero">
   <h1>AI automation built for real estate professionals</h1>
   <p>Generate listings, follow up with leads, and book showings automatically.</p>
 </div>
 
-<!-- TOOLS -->
 <div id="panel-tools" class="panel active">
   <div class="card">
     <h3>Welcome to PropAI</h3>
@@ -110,7 +105,6 @@ nav {
   </div>
 </div>
 
-<!-- FOLLOWUP -->
 <div id="panel-followup" class="panel">
   <div class="card">
     <h3>AI Lead Follow-Up</h3>
@@ -120,7 +114,6 @@ nav {
   </div>
 </div>
 
-<!-- LISTING -->
 <div id="panel-listing" class="panel">
   <div class="card">
     <h3>Listing Generator</h3>
@@ -130,7 +123,6 @@ nav {
   </div>
 </div>
 
-<!-- BOOKING -->
 <div id="panel-booking" class="panel">
   <div class="card">
     <h3>AI Assistant</h3>
@@ -142,10 +134,25 @@ nav {
 
 </main>
 
-<script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
+
+/* AUTH CHECK */
+async function checkAuth() {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    window.location.href = "/login.html";
+  }
+}
+checkAuth();
 
 /* NAV */
-function showPanel(name){
+window.showPanel = function(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
 }
@@ -158,7 +165,7 @@ function appendMsg(text, cls){
   document.getElementById('chat-messages').appendChild(el);
 }
 
-async function sendChat(){
+window.sendChat = async function(){
   const input=document.getElementById('chat-input');
   const msg=input.value.trim();
   if(!msg)return;
@@ -177,7 +184,7 @@ async function sendChat(){
 }
 
 /* FOLLOWUP */
-async function generateFollowUp(){
+window.generateFollowUp = async function(){
   const name=document.getElementById('lead-name').value;
 
   const res=await fetch('/.netlify/functions/chat',{
@@ -194,7 +201,7 @@ async function generateFollowUp(){
 }
 
 /* LISTING */
-async function generateListing(){
+window.generateListing = async function(){
   const address=document.getElementById('prop-address').value;
 
   const res=await fetch('/.netlify/functions/chat',{
@@ -211,18 +218,30 @@ async function generateListing(){
 }
 
 /* STRIPE */
-async function upgrade(){
+window.upgrade = async function(){
   const res=await fetch('/.netlify/functions/createCheckout',{method:'POST'});
   const data=await res.json();
   window.location=data.url;
 }
 
-async function billing(){
+window.billing = async function(){
   const res=await fetch('/.netlify/functions/createPortal',{method:'POST'});
   const data=await res.json();
   window.location=data.url;
 }
 
+/* SUCCESS / CANCEL HANDLER */
+window.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("success")) {
+    alert("Payment successful 🎉");
+  }
+
+  if (params.get("canceled")) {
+    alert("Payment canceled");
+  }
+});
 </script>
 
 </body>
