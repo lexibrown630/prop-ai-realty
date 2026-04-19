@@ -2,15 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payments - PropAI Realty</title>
+  <title>Choose Your Plan</title>
 </head>
 <body>
+
   <h1>Choose your plan</h1>
+
   <ul>
-    <li>Starter - $19/month</li>
-    <li>Agency - $49/month</li>
-    <li>Pro - $99/month</li>
+    <li>Starter - $79.99/month</li>
+    <li>Agency - $149.99/month</li>
+    <li>Pro - $349.99/month</li>
   </ul>
+
   <button id="checkout-btn">Go to Checkout</button>
+
+  <p id="status"></p>
+
+  <script>
+    const btn = document.getElementById("checkout-btn");
+    const status = document.getElementById("status");
+
+    btn.addEventListener("click", async () => {
+      status.textContent = "Redirecting to checkout...";
+
+      try {
+        const res = await fetch("/.netlify/functions/createCheckout", {
+          method: "POST",
+        });
+
+        const data = await res.json();
+
+        if (data.url) {
+          window.location.href = data.url; // 🔑 REDIRECT TO STRIPE
+        } else {
+          status.textContent = "❌ No checkout URL returned";
+        }
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ Error starting checkout";
+      }
+    });
+  </script>
+
 </body>
 </html>
