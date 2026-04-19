@@ -23,7 +23,7 @@ exports.handler = async (event) => {
       payment_method_types: ["card"],
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: "https://prop-ai-realty.netlify.app/?success=true",
+      success_url: "https://prop-ai-realty.netlify.app/src/router.html?paid=true",
       cancel_url: "https://prop-ai-realty.netlify.app/?cancel=true",
     });
 
