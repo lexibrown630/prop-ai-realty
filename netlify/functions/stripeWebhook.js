@@ -1,31 +1,32 @@
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
 export async function handler(event) {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method not allowed" };
-  }
-
+  // 🔥 REQUIRED for Stripe signature verification
   const sig = event.headers["stripe-signature"];
 
   let stripeEvent;
 
   try {
     stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
+      event.body, // must be raw body
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error("❌ Webhook signature failed:", err.message);
+    console.error("❌ Signature verification failed:", err.message);
     return {
       statusCode: 400,
       body: `Webhook Error: ${err.message}`,
     };
   }
 
-  // ✅ CHECKOUT SUCCESS
+  /* ==============================
+     ✅ CHECKOUT SUCCESS HANDLER
+  ============================== */
   if (stripeEvent.type === "checkout.session.completed") {
     const session = stripeEvent.data.object;
 
@@ -35,19 +36,20 @@ export async function handler(event) {
       "";
 
     const plan = session.metadata?.plan || "starter";
-    const customerId = session.customer;
 
     console.log("💰 PAYMENT SUCCESS:", email, plan);
 
     if (!email) {
-      console.error("❌ No email found");
-      return { statusCode: 400, body: "Missing email" };
+      return {
+        statusCode: 400,
+        body: "No email found",
+      };
     }
 
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      // 🔥 TRY UPDATE
+      // 🔥 UPDATE USER
       const res = await fetch(
         `https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users?email=eq.${cleanEmail}`,
         {
@@ -61,7 +63,6 @@ export async function handler(event) {
           body: JSON.stringify({
             subscription_status: "active",
             plan: plan,
-            stripe_customer_id: customerId,
           }),
         }
       );
@@ -70,9 +71,9 @@ export async function handler(event) {
 
       console.log("🧾 Updated rows:", data);
 
-      // 🔥 IF USER DOESN'T EXIST → CREATE
+      // 🔥 CREATE USER IF NOT EXISTS
       if (!data || data.length === 0) {
-        console.log("⚠️ Creating new user...");
+        console.log("⚠️ No user found, creating...");
 
         const createRes = await fetch(
           "https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users",
@@ -88,7 +89,6 @@ export async function handler(event) {
               email: cleanEmail,
               subscription_status: "active",
               plan: plan,
-              stripe_customer_id: customerId,
             }),
           }
         );
@@ -104,6 +104,6 @@ export async function handler(event) {
 
   return {
     statusCode: 200,
-    body: "Webhook received",
+    body: "OK",
   };
 }
