@@ -71,19 +71,45 @@ nav {
   border-radius:8px;
   font-weight:600;
 }
+
+.badge {
+  background:var(--gold);
+  color:black;
+  padding:4px 10px;
+  border-radius:20px;
+  font-size:12px;
+  margin-left:10px;
+}
+
+.usage-bar {
+  height:8px;
+  background:#eee;
+  border-radius:10px;
+  margin-top:10px;
+  overflow:hidden;
+}
+.usage-fill {
+  height:100%;
+  background:var(--gold);
+  width:0%;
+}
 </style>
 </head>
 
 <body>
 
 <nav>
-  <div class="logo">PropAI</div>
+  <div>
+    <span class="logo">PropAI</span>
+    <span id="plan-badge" class="badge">Starter</span>
+  </div>
+
   <div class="nav-tabs">
     <button onclick="showPanel('tools')">Tools</button>
     <button onclick="showPanel('followup')">Follow-Up</button>
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
-    <button onclick="goLogin()">Login</button>
+    <button onclick="openBilling()">Billing</button>
     <button onclick="goPricing()">Pricing</button>
   </div>
 </nav>
@@ -93,6 +119,11 @@ nav {
 <div class="hero">
   <h1>AI automation built for real estate professionals</h1>
   <p>Generate listings, follow up with leads, and book showings automatically.</p>
+
+  <div id="usage-text">Usage: 0/10</div>
+  <div class="usage-bar">
+    <div id="usage-fill" class="usage-fill"></div>
+  </div>
 </div>
 
 <div id="panel-tools" class="panel active">
@@ -134,7 +165,6 @@ nav {
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* 🚨 HIDE PAGE FIRST */
 document.body.style.display = "none";
 
 const supabase = createClient(
@@ -142,37 +172,90 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* 🔥 STRONG AUTH CHECK (FIXED) */
+/* USER STATE */
+let userPlan = "starter";
+let usageCount = 0;
+let usageLimit = 10;
+
+/* AUTH */
 async function enforceAuth() {
-  try {
-    const { data } = await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
+  await new Promise(r => setTimeout(r, 300));
 
-    // wait a split second to allow session restore
-    await new Promise(r => setTimeout(r, 300));
-
-    const session = data.session;
-
-    if (!session || !session.user) {
-      window.location.href = "/login.html";
-      return;
-    }
-
-    // ✅ logged in
-    document.body.style.display = "block";
-
-  } catch (err) {
-    console.error(err);
+  if (!data.session) {
     window.location.href = "/login.html";
+    return;
   }
+
+  await loadUserData(data.session.user.id);
+  document.body.style.display = "block";
 }
 
-enforceAuth();
+/* LOAD PLAN + USAGE */
+async function loadUserData(userId){
+  const { data } = await supabase
+    .from("users")
+    .select("plan, usage_count")
+    .eq("id", userId)
+    .single();
+
+  if (data){
+    userPlan = data.plan || "starter";
+    usageCount = data.usage_count || 0;
+  }
+
+  /* PLAN LIMITS */
+  if (userPlan === "starter") usageLimit = 10;
+  if (userPlan === "pro") usageLimit = 100;
+  if (userPlan === "agency") usageLimit = 999999;
+
+  updateUI();
+}
+
+/* UI UPDATE */
+function updateUI(){
+  document.getElementById("plan-badge").innerText =
+    userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
+
+  document.getElementById("usage-text").innerText =
+    `Usage: ${usageCount}/${usageLimit === 999999 ? "∞" : usageLimit}`;
+
+  const percent = (usageCount / usageLimit) * 100;
+  document.getElementById("usage-fill").style.width = percent + "%";
+}
+
+/* FEATURE LOCK */
+function checkAccess(feature){
+  if (userPlan === "starter" && feature === "listing"){
+    alert("Upgrade to Pro to unlock Listings");
+    return false;
+  }
+  return true;
+}
+
+/* TRACK USAGE */
+async function incrementUsage(){
+  usageCount++;
+  updateUI();
+
+  await supabase
+    .from("users")
+    .update({ usage_count: usageCount })
+    .eq("id", (await supabase.auth.getUser()).data.user.id);
+}
+
+/* BILLING */
+window.openBilling = async function(){
+  const res = await fetch('/.netlify/functions/stripe-portal',{
+    method:'POST'
+  });
+
+  const data = await res.json();
+  window.location.href = data.url;
+}
 
 /* NAV */
-window.goLogin = () => window.location.href = "/login.html";
 window.goPricing = () => window.location.href = "/payments.html";
-
-/* PANELS */
 window.showPanel = function(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
@@ -187,6 +270,11 @@ function appendMsg(text, cls){
 }
 
 window.sendChat = async function(){
+  if (usageCount >= usageLimit){
+    alert("Usage limit reached");
+    return;
+  }
+
   const input=document.getElementById('chat-input');
   const msg=input.value.trim();
   if(!msg)return;
@@ -202,10 +290,14 @@ window.sendChat = async function(){
 
   const data=await res.json();
   appendMsg(data.reply || 'Error','bot');
+
+  incrementUsage();
 }
 
 /* FOLLOWUP */
 window.generateFollowUp = async function(){
+  if (usageCount >= usageLimit) return alert("Limit reached");
+
   const name=document.getElementById('lead-name').value;
 
   const res=await fetch('/.netlify/functions/chat',{
@@ -219,10 +311,15 @@ window.generateFollowUp = async function(){
 
   const data=await res.json();
   document.getElementById('email-content').innerText=data.reply;
+
+  incrementUsage();
 }
 
 /* LISTING */
 window.generateListing = async function(){
+  if (!checkAccess("listing")) return;
+  if (usageCount >= usageLimit) return alert("Limit reached");
+
   const address=document.getElementById('prop-address').value;
 
   const res=await fetch('/.netlify/functions/chat',{
@@ -236,7 +333,11 @@ window.generateListing = async function(){
 
   const data=await res.json();
   document.getElementById('listing-content').innerText=data.reply;
+
+  incrementUsage();
 }
+
+enforceAuth();
 </script>
 
 </body>
