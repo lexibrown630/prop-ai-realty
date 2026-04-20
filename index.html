@@ -4,155 +4,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PropAI — Real Estate Automation Platform</title>
+<title>PropAI Dashboard</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-:root { --gold:#C9A84C; --navy:#0D1B2A; --cream:#FAF8F3; }
-body { font-family:'DM Sans',sans-serif; background:var(--cream); margin:0; }
+:root{
+  --bg:#0f172a;
+  --panel:#111827;
+  --card:#1f2937;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+  --accent:#6366f1;
+}
 
-nav {
-  background:var(--navy);
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* LAYOUT */
+.app{
+  display:flex;
+  height:100vh;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:240px;
+  background:#020617;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+.logo{
+  font-weight:600;
+  font-size:18px;
+  margin-bottom:30px;
+}
+
+.nav-item{
+  padding:10px;
+  border-radius:8px;
+  cursor:pointer;
+  color:var(--muted);
+}
+.nav-item:hover{
+  background:#111827;
   color:white;
-  padding:16px 24px;
+}
+
+/* MAIN */
+.main{
+  flex:1;
+  padding:30px;
+  overflow:auto;
+}
+
+.header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-}
-.logo { font-family:'Playfair Display',serif; color:var(--gold); font-size:22px; }
-
-.nav-tabs button {
-  background:none;
-  border:none;
-  color:#8899AA;
-  margin-left:12px;
-  cursor:pointer;
-  font-size:13px;
+  margin-bottom:30px;
 }
 
-.panel { display:none; padding:30px; max-width:1100px; margin:auto; }
-.panel.active { display:block; }
-
-.hero {
-  background:var(--navy);
-  color:white;
-  border-radius:20px;
-  padding:40px;
-  margin-bottom:20px;
+/* CARDS */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:20px;
 }
 
-.card {
-  background:white;
-  border-radius:16px;
+.card{
+  background:var(--card);
   padding:20px;
-  margin-bottom:20px;
-  border:1px solid #eee;
+  border-radius:12px;
 }
 
-.chat-box {
+/* BUTTON */
+.btn{
+  background:var(--accent);
+  border:none;
+  padding:10px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  color:white;
+}
+
+/* CHAT */
+.chat{
   height:300px;
   overflow:auto;
-  border:1px solid #eee;
+  background:#020617;
   padding:10px;
-  background:#fff;
   border-radius:10px;
 }
 
-.msg { margin-bottom:10px; }
-.msg.user { text-align:right; }
-.msg.bot { text-align:left; }
-
-.btn {
-  background:var(--gold);
-  border:none;
-  padding:10px 16px;
-  cursor:pointer;
-  border-radius:8px;
-  font-weight:600;
-}
-
-.badge {
-  background:var(--gold);
-  color:black;
-  padding:4px 10px;
-  border-radius:20px;
-  font-size:12px;
-  margin-left:10px;
-}
-
-.usage-bar {
-  height:8px;
-  background:#eee;
-  border-radius:10px;
+input{
+  width:100%;
+  padding:10px;
   margin-top:10px;
-}
-.usage-fill {
-  height:100%;
-  background:var(--gold);
-  width:0%;
+  border-radius:6px;
+  border:none;
 }
 
-/* PAYWALL */
-.modal {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
-
-.modal-content {
-  background:white;
-  padding:30px;
-  border-radius:16px;
-  max-width:650px;
-  width:90%;
-}
-
-.close {
-  float:right;
-  cursor:pointer;
-}
-
-.plans {
-  display:flex;
-  gap:15px;
-  margin-top:20px;
-}
-
-.plan {
-  flex:1;
-  border:1px solid #eee;
-  border-radius:12px;
-  padding:15px;
-}
-
-.plan.pro {
-  border:2px solid var(--gold);
-  transform:scale(1.05);
-}
-
-.price {
-  font-size:22px;
-  font-weight:700;
-  margin:10px 0;
-}
-
-.price span {
-  font-size:12px;
-  color:#777;
-}
-
-.plan ul {
-  padding-left:18px;
+/* USAGE */
+.usage{
   font-size:13px;
-}
-
-.secondary {
-  background:#ddd;
+  color:var(--muted);
 }
 </style>
 
@@ -160,186 +124,130 @@ nav {
 
 <body>
 
-<nav>
+<div class="app">
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
   <div>
-    <span class="logo">PropAI</span>
-    <span id="plan-badge" class="badge">Starter</span>
+    <div class="logo">PropAI</div>
+
+```
+<div class="nav-item" onclick="showPage('dashboard')">Dashboard</div>
+<div class="nav-item" onclick="showPage('followup')">Follow-Up</div>
+<div class="nav-item" onclick="showPage('listing')">Listings</div>
+<div class="nav-item" onclick="showPage('chat')">Assistant</div>
+```
+
   </div>
 
-  <div class="nav-tabs">
-    <button onclick="showPanel('tools')">Tools</button>
-    <button onclick="showPanel('followup')">Follow-Up</button>
-    <button onclick="showPanel('listing')">Listings</button>
-    <button onclick="showPanel('booking')">Booking</button>
-    <button onclick="openBilling()">Billing</button>
-    <button onclick="goPricing()">Pricing</button>
-  </div>
-</nav>
-
-<main>
-
-<div class="hero">
-  <h1>AI automation built for real estate professionals</h1>
-  <p>Generate listings, follow up with leads, and book showings automatically.</p>
-
-  <div id="usage-text">Usage: 0/10</div>
-  <div class="usage-bar">
-    <div id="usage-fill" class="usage-fill"></div>
+  <div>
+    <div id="plan">Starter Plan</div>
+    <div class="usage" id="usage">0/10 used</div>
+    <button class="btn" onclick="openBilling()">Billing</button>
   </div>
 </div>
 
-<div id="panel-tools" class="panel active">
+<!-- MAIN -->
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+
+  <div id="page-dashboard">
+    <div class="header">
+      <h2>Dashboard</h2>
+    </div>
+
+```
+<div class="grid">
   <div class="card">
-    <h3>Welcome to PropAI</h3>
+    <h3>Generate Follow-Up</h3>
+    <button class="btn" onclick="showPage('followup')">Open</button>
   </div>
-</div>
 
-<div id="panel-followup" class="panel">
   <div class="card">
-    <h3>AI Lead Follow-Up</h3>
-    <input id="lead-name" placeholder="Lead name">
-    <button class="btn" onclick="generateFollowUp()">Generate</button>
-    <pre id="email-content"></pre>
+    <h3>Create Listing</h3>
+    <button class="btn" onclick="showPage('listing')">Open</button>
   </div>
-</div>
 
-<div id="panel-listing" class="panel">
-  <div class="card">
-    <h3>Listing Generator</h3>
-    <input id="prop-address" placeholder="Property address">
-    <button class="btn" onclick="generateListing()">Generate</button>
-    <pre id="listing-content"></pre>
-  </div>
-</div>
-
-<div id="panel-booking" class="panel">
   <div class="card">
     <h3>AI Assistant</h3>
-    <div id="chat-messages" class="chat-box"></div>
-    <input id="chat-input" placeholder="Type message..." onkeydown="if(event.key==='Enter')sendChat()">
-    <button class="btn" onclick="sendChat()">Send</button>
-  </div>
-</div>
-
-</main>
-
-<!-- PAYWALL -->
-
-<div id="paywall" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closePaywall()">✖</span>
-
-```
-<h2 id="paywall-title">Upgrade Your Plan</h2>
-<p id="paywall-msg"></p>
-
-<div class="plans">
-  <div class="plan pro">
-    <h3>Pro</h3>
-    <div class="price">$29<span>/mo</span></div>
-    <ul>
-      <li>✔ 100 generations</li>
-      <li>✔ Listing generator</li>
-      <li>✔ Lead follow-ups</li>
-      <li>✔ Faster AI</li>
-    </ul>
-    <button class="btn" onclick="startCheckout('pro')">Upgrade to Pro</button>
-  </div>
-
-  <div class="plan">
-    <h3>Agency</h3>
-    <div class="price">$79<span>/mo</span></div>
-    <ul>
-      <li>✔ Unlimited usage</li>
-      <li>✔ All features</li>
-      <li>✔ Priority speed</li>
-    </ul>
-    <button class="btn secondary" onclick="startCheckout('agency')">Go Agency</button>
+    <button class="btn" onclick="showPage('chat')">Open</button>
   </div>
 </div>
 ```
 
   </div>
+
+  <!-- FOLLOWUP -->
+
+  <div id="page-followup" style="display:none">
+    <h2>Follow-Up Generator</h2>
+    <input id="lead" placeholder="Lead name">
+    <button class="btn" onclick="followUp()">Generate</button>
+    <pre id="follow-output"></pre>
+  </div>
+
+  <!-- LISTING -->
+
+  <div id="page-listing" style="display:none">
+    <h2>Listing Generator</h2>
+    <input id="address" placeholder="Property address">
+    <button class="btn" onclick="listing()">Generate</button>
+    <pre id="listing-output"></pre>
+  </div>
+
+  <!-- CHAT -->
+
+  <div id="page-chat" style="display:none">
+    <h2>AI Assistant</h2>
+    <div id="chatbox" class="chat"></div>
+    <input id="msg" placeholder="Type..." onkeydown="if(event.key==='Enter')chat()">
+    <button class="btn" onclick="chat()">Send</button>
+  </div>
+
+</div>
 </div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-document.body.style.display="none";
-
 const supabase=createClient(
-"https://jrmqdojsxjtkjpczaysp.supabase.co",
-"sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_..."
 );
 
-let userPlan="starter", usageCount=0, usageLimit=10;
+let usage=0,limit=10,plan="starter";
 
 /* AUTH */
-async function enforceAuth(){
-  const {data}=await supabase.auth.getSession();
-  if(!data.session) return location.href="/login.html";
+const {data}=await supabase.auth.getSession();
+if(!data.session) location.href="/login.html";
 
-  await loadUserData(data.session.user.id);
-  document.body.style.display="block";
+/* LOAD USER */
+const user=await supabase.from("users")
+  .select("*")
+  .eq("id",data.session.user.id)
+  .single();
+
+if(user.data){
+  usage=user.data.usage_count||0;
+  plan=user.data.plan||"starter";
 }
 
-/* LOAD */
-async function loadUserData(id){
-  const {data}=await supabase.from("users")
-    .select("plan, usage_count")
-    .eq("id",id).single();
+limit=plan==="starter"?10:plan==="pro"?100:999999;
 
-  if(data){
-    userPlan=data.plan||"starter";
-    usageCount=data.usage_count||0;
-  }
+document.getElementById("plan").innerText=plan.toUpperCase();
+document.getElementById("usage").innerText=`${usage}/${limit}`;
 
-  usageLimit=userPlan==="starter"?10:userPlan==="pro"?100:999999;
-  updateUI();
-}
-
-/* UI */
-function updateUI(){
-  document.getElementById("plan-badge").innerText=userPlan;
-  document.getElementById("usage-text").innerText=
-    `Usage: ${usageCount}/${usageLimit===999999?"∞":usageLimit}`;
-  document.getElementById("usage-fill").style.width=
-    (usageCount/usageLimit*100)+"%";
-}
-
-/* PAYWALL */
-window.showPaywall=function(type){
-  const title=document.getElementById("paywall-title");
-  const msg=document.getElementById("paywall-msg");
-
-  if(type==="limit"){
-    title.innerText="You've Hit Your Limit";
-    msg.innerText="Upgrade to continue generating AI content.";
-  } else if(type==="listing"){
-    title.innerText="Unlock Listing Generator";
-    msg.innerText="Upgrade to Pro to create high-converting listings.";
-  } else {
-    title.innerText="Upgrade Your Plan";
-    msg.innerText="Get more power and unlock premium features.";
-  }
-
-  document.getElementById("paywall").style.display="flex";
-}
-window.closePaywall=()=>document.getElementById("paywall").style.display="none";
-
-/* STRIPE */
-window.startCheckout=async(plan)=>{
-  const res=await fetch('/.netlify/functions/create-checkout',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({plan})
-  });
-  const data=await res.json();
-  location.href=data.url;
-}
+/* NAV */
+window.showPage=(p)=>{
+  document.querySelectorAll("[id^=page-]").forEach(x=>x.style.display="none");
+  document.getElementById("page-"+p).style.display="block";
+};
 
 /* FETCH */
-async function authedFetch(body){
+async function api(body){
   const {data:{session}}=await supabase.auth.getSession();
   return fetch('/.netlify/functions/chat',{
     method:'POST',
@@ -351,76 +259,49 @@ async function authedFetch(body){
   });
 }
 
-/* NAV */
-window.goPricing=()=>location.href="/payments.html";
-window.openBilling=async()=>{
-  const r=await fetch('/.netlify/functions/stripe-portal',{method:'POST'});
-  location.href=(await r.json()).url;
-}
-window.showPanel=name=>{
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-}
-
 /* CHAT */
-function appendMsg(t,c){
-  const d=document.createElement('div');
-  d.className='msg '+c; d.innerText=t;
-  document.getElementById('chat-messages').appendChild(d);
-}
+window.chat=async()=>{
+  if(usage>=limit) return alert("Limit reached");
 
-window.sendChat=async()=>{
-  if(usageCount>=usageLimit) return showPaywall("limit");
-
-  const input=document.getElementById('chat-input');
-  const msg=input.value.trim(); if(!msg)return;
-
-  input.value=''; appendMsg(msg,'user');
-
-  const res=await authedFetch({message:msg});
+  const msg=document.getElementById("msg").value;
+  const res=await api({message:msg});
   const data=await res.json();
 
-  appendMsg(data.reply||data.error,'bot');
-
-  if(!data.error){ usageCount++; updateUI(); }
-}
+  document.getElementById("chatbox").innerHTML+=`<div>${data.reply}</div>`;
+  usage++;
+};
 
 /* FOLLOWUP */
-window.generateFollowUp=async()=>{
-  if(usageCount>=usageLimit) return showPaywall("limit");
+window.followUp=async()=>{
+  if(usage>=limit) return alert("Limit reached");
 
-  const name=document.getElementById('lead-name').value;
-
-  const res=await authedFetch({
-    message:`Write a real estate follow-up for ${name}`,
-    type:'followup'
-  });
-
+  const name=document.getElementById("lead").value;
+  const res=await api({message:`Follow up with ${name}`,type:"followup"});
   const data=await res.json();
-  document.getElementById('email-content').innerText=data.reply||data.error;
 
-  if(!data.error){ usageCount++; updateUI(); }
-}
+  document.getElementById("follow-output").innerText=data.reply;
+  usage++;
+};
 
 /* LISTING */
-window.generateListing=async()=>{
-  if(userPlan==="starter") return showPaywall("listing");
-  if(usageCount>=usageLimit) return showPaywall("limit");
+window.listing=async()=>{
+  if(plan==="starter") return alert("Upgrade required");
+  if(usage>=limit) return alert("Limit reached");
 
-  const address=document.getElementById('prop-address').value;
-
-  const res=await authedFetch({
-    message:`Create MLS listing for ${address}`,
-    type:'listing'
-  });
-
+  const address=document.getElementById("address").value;
+  const res=await api({message:`Listing for ${address}`,type:"listing"});
   const data=await res.json();
-  document.getElementById('listing-content').innerText=data.reply||data.error;
 
-  if(!data.error){ usageCount++; updateUI(); }
-}
+  document.getElementById("listing-output").innerText=data.reply;
+  usage++;
+};
 
-enforceAuth();
+/* BILLING */
+window.openBilling=async()=>{
+  const res=await fetch('/.netlify/functions/stripe-portal',{method:'POST'});
+  const data=await res.json();
+  location.href=data.url;
+};
 </script>
 
 </body>
