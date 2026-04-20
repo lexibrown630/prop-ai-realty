@@ -7,45 +7,47 @@ export async function handler(event) {
     return { statusCode: 405, body: "Method not allowed" };
   }
 
+  const sig = event.headers["stripe-signature"];
+
   let stripeEvent;
 
   try {
-    stripeEvent = JSON.parse(event.body);
+    stripeEvent = stripe.webhooks.constructEvent(
+      event.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
   } catch (err) {
-    console.error("❌ Invalid JSON:", err);
+    console.error("❌ Webhook signature failed:", err.message);
     return {
       statusCode: 400,
-      body: "Invalid JSON",
+      body: `Webhook Error: ${err.message}`,
     };
   }
 
-  // 🔥 HANDLE SUCCESSFUL CHECKOUT
+  // ✅ CHECKOUT SUCCESS
   if (stripeEvent.type === "checkout.session.completed") {
     const session = stripeEvent.data.object;
 
-    // 🔥 SAFELY GET EMAIL
     const email =
       session.customer_email ||
       session.customer_details?.email ||
       "";
 
     const plan = session.metadata?.plan || "starter";
+    const customerId = session.customer;
 
     console.log("💰 PAYMENT SUCCESS:", email, plan);
 
     if (!email) {
-      console.error("❌ No email found in session");
-      return {
-        statusCode: 400,
-        body: "No email found",
-      };
+      console.error("❌ No email found");
+      return { statusCode: 400, body: "Missing email" };
     }
 
-    // 🔥 CLEAN EMAIL (FIXES MATCH ISSUES)
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      // 🔥 UPDATE SUPABASE USER
+      // 🔥 TRY UPDATE
       const res = await fetch(
         `https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users?email=eq.${cleanEmail}`,
         {
@@ -54,22 +56,23 @@ export async function handler(event) {
             apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
             Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
             "Content-Type": "application/json",
-            Prefer: "return=representation", // 🔥 returns updated rows
+            Prefer: "return=representation",
           },
           body: JSON.stringify({
             subscription_status: "active",
             plan: plan,
+            stripe_customer_id: customerId,
           }),
         }
       );
 
       const data = await res.json();
 
-      console.log("🧾 Supabase updated rows:", data);
+      console.log("🧾 Updated rows:", data);
 
-      // 🚨 IF NO ROW UPDATED → USER DOESN’T EXIST → CREATE IT
+      // 🔥 IF USER DOESN'T EXIST → CREATE
       if (!data || data.length === 0) {
-        console.log("⚠️ No user found, creating new user...");
+        console.log("⚠️ Creating new user...");
 
         const createRes = await fetch(
           "https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users",
@@ -85,17 +88,17 @@ export async function handler(event) {
               email: cleanEmail,
               subscription_status: "active",
               plan: plan,
+              stripe_customer_id: customerId,
             }),
           }
         );
 
         const newUser = await createRes.json();
-
         console.log("🆕 Created user:", newUser);
       }
 
     } catch (err) {
-      console.error("❌ Supabase update error:", err);
+      console.error("❌ Supabase error:", err);
     }
   }
 
