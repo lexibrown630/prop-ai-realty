@@ -30,8 +30,6 @@ nav {
   cursor:pointer;
   font-size:13px;
 }
-.nav-tabs button.active { color:var(--gold); }
-
 .panel { display:none; padding:30px; max-width:1100px; margin:auto; }
 .panel.active { display:block; }
 
@@ -87,12 +85,35 @@ nav {
   background:#eee;
   border-radius:10px;
   margin-top:10px;
-  overflow:hidden;
 }
 .usage-fill {
   height:100%;
   background:var(--gold);
   width:0%;
+}
+
+/* PAYWALL */
+.modal {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+.modal-content {
+  background:white;
+  padding:30px;
+  border-radius:16px;
+  max-width:400px;
+  text-align:center;
+}
+.modal h2 { margin-top:0; }
+.close {
+  cursor:pointer;
+  float:right;
+  font-size:18px;
 }
 </style>
 
@@ -131,7 +152,6 @@ nav {
 <div id="panel-tools" class="panel active">
   <div class="card">
     <h3>Welcome to PropAI</h3>
-    <p>Select a tool above to get started.</p>
   </div>
 </div>
 
@@ -164,6 +184,17 @@ nav {
 
 </main>
 
+<!-- PAYWALL MODAL -->
+
+<div id="paywall" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closePaywall()">✖</span>
+    <h2 id="paywall-title">Upgrade Required</h2>
+    <p id="paywall-msg"></p>
+    <button class="btn" onclick="goPricing()">Upgrade Now</button>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -174,153 +205,140 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* STATE */
-let userPlan = "starter";
-let usageCount = 0;
-let usageLimit = 10;
+let userPlan="starter", usageCount=0, usageLimit=10;
 
 /* AUTH */
-async function enforceAuth() {
+async function enforceAuth(){
   const { data } = await supabase.auth.getSession();
-  await new Promise(r => setTimeout(r, 300));
-
-  if (!data.session) {
-    window.location.href = "/login.html";
-    return;
-  }
+  if (!data.session) return location.href="/login.html";
 
   await loadUserData(data.session.user.id);
-  document.body.style.display = "block";
+  document.body.style.display="block";
 }
 
-/* LOAD USER */
-async function loadUserData(userId){
-  const { data } = await supabase
-    .from("users")
+/* LOAD */
+async function loadUserData(id){
+  const { data } = await supabase.from("users")
     .select("plan, usage_count")
-    .eq("id", userId)
+    .eq("id", id)
     .single();
 
-  if (data){
-    userPlan = data.plan || "starter";
-    usageCount = data.usage_count || 0;
+  if(data){
+    userPlan=data.plan||"starter";
+    usageCount=data.usage_count||0;
   }
 
-  if (userPlan === "starter") usageLimit = 10;
-  if (userPlan === "pro") usageLimit = 100;
-  if (userPlan === "agency") usageLimit = 999999;
-
+  usageLimit = userPlan==="starter"?10 : userPlan==="pro"?100 : 999999;
   updateUI();
 }
 
 /* UI */
 function updateUI(){
-  document.getElementById("plan-badge").innerText =
-    userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
-
-  document.getElementById("usage-text").innerText =
-    `Usage: ${usageCount}/${usageLimit === 999999 ? "∞" : usageLimit}`;
-
-  const percent = Math.min((usageCount / usageLimit) * 100, 100);
-  document.getElementById("usage-fill").style.width = percent + "%";
+  document.getElementById("plan-badge").innerText=userPlan;
+  document.getElementById("usage-text").innerText=
+    `Usage: ${usageCount}/${usageLimit===999999?"∞":usageLimit}`;
+  document.getElementById("usage-fill").style.width=
+    (usageCount/usageLimit*100)+"%";
 }
 
-/* AUTHED FETCH */
-async function authedFetch(body){
-  const { data: { session } } = await supabase.auth.getSession();
+/* PAYWALL */
+window.showPaywall=function(type){
+  const modal=document.getElementById("paywall");
+  const title=document.getElementById("paywall-title");
+  const msg=document.getElementById("paywall-msg");
 
+  if(type==="limit"){
+    title.innerText="Usage Limit Reached";
+    msg.innerText="You've hit your limit. Upgrade to continue.";
+  } else {
+    title.innerText="Upgrade Required";
+    msg.innerText="This feature is available on Pro plan.";
+  }
+
+  modal.style.display="flex";
+}
+window.closePaywall=()=>document.getElementById("paywall").style.display="none";
+
+/* AUTH FETCH */
+async function authedFetch(body){
+  const { data:{session} }=await supabase.auth.getSession();
   return fetch('/.netlify/functions/chat',{
     method:'POST',
     headers:{
       'Content-Type':'application/json',
-      'Authorization': `Bearer ${session.access_token}`
+      'Authorization':`Bearer ${session.access_token}`
     },
-    body: JSON.stringify(body)
+    body:JSON.stringify(body)
   });
 }
 
-/* BILLING */
-window.openBilling = async function(){
-  const res = await fetch('/.netlify/functions/stripe-portal',{ method:'POST' });
-  const data = await res.json();
-  window.location.href = data.url;
-}
-
 /* NAV */
-window.goPricing = () => window.location.href = "/payments.html";
-window.showPanel = function(name){
+window.goPricing=()=>location.href="/payments.html";
+window.openBilling=async()=>{
+  const r=await fetch('/.netlify/functions/stripe-portal',{method:'POST'});
+  location.href=(await r.json()).url;
+}
+window.showPanel=name=>{
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
 }
 
 /* CHAT */
-function appendMsg(text, cls){
-  const el=document.createElement('div');
-  el.className='msg '+cls;
-  el.innerText=text;
-  document.getElementById('chat-messages').appendChild(el);
+function appendMsg(t,c){
+  const d=document.createElement('div');
+  d.className='msg '+c; d.innerText=t;
+  document.getElementById('chat-messages').appendChild(d);
 }
 
-window.sendChat = async function(){
-  if (usageCount >= usageLimit) return alert("Usage limit reached");
+window.sendChat=async()=>{
+  if(usageCount>=usageLimit) return showPaywall("limit");
 
   const input=document.getElementById('chat-input');
-  const msg=input.value.trim();
-  if(!msg)return;
+  const msg=input.value.trim(); if(!msg)return;
 
-  input.value='';
-  appendMsg(msg,'user');
+  input.value=''; appendMsg(msg,'user');
 
-  const res = await authedFetch({ message: msg });
-  const data = await res.json();
+  const res=await authedFetch({message:msg});
+  const data=await res.json();
 
-  appendMsg(data.reply || data.error,'bot');
+  appendMsg(data.reply||data.error,'bot');
 
-  if (!data.error){
-    usageCount++;
-    updateUI();
-  }
+  if(!data.error){ usageCount++; updateUI(); }
 }
 
 /* FOLLOWUP */
-window.generateFollowUp = async function(){
-  if (usageCount >= usageLimit) return alert("Usage limit reached");
+window.generateFollowUp=async()=>{
+  if(usageCount>=usageLimit) return showPaywall("limit");
 
   const name=document.getElementById('lead-name').value;
 
-  const res = await authedFetch({
+  const res=await authedFetch({
     message:`Write a real estate follow-up for ${name}`,
     type:'followup'
   });
 
-  const data = await res.json();
-  document.getElementById('email-content').innerText = data.reply || data.error;
+  const data=await res.json();
+  document.getElementById('email-content').innerText=data.reply||data.error;
 
-  if (!data.error){
-    usageCount++;
-    updateUI();
-  }
+  if(!data.error){ usageCount++; updateUI(); }
 }
 
 /* LISTING */
-window.generateListing = async function(){
-  if (userPlan === "starter") return alert("Upgrade to Pro to unlock listings");
-  if (usageCount >= usageLimit) return alert("Usage limit reached");
+window.generateListing=async()=>{
+  if(userPlan==="starter") return showPaywall("listing");
+  if(usageCount>=usageLimit) return showPaywall("limit");
 
   const address=document.getElementById('prop-address').value;
 
-  const res = await authedFetch({
+  const res=await authedFetch({
     message:`Create MLS listing for ${address}`,
     type:'listing'
   });
 
-  const data = await res.json();
-  document.getElementById('listing-content').innerText = data.reply || data.error;
+  const data=await res.json();
+  document.getElementById('listing-content').innerText=data.reply||data.error;
 
-  if (!data.error){
-    usageCount++;
-    updateUI();
-  }
+  if(!data.error){ usageCount++; updateUI(); }
 }
 
 enforceAuth();
