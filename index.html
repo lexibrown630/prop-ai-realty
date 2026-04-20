@@ -29,7 +29,7 @@ nav {
   cursor:pointer;
   font-size:13px;
 }
-.nav-tabs button:hover { color:white; }
+.nav-tabs button.active { color:var(--gold); }
 
 .panel { display:none; padding:30px; max-width:1100px; margin:auto; }
 .panel.active { display:block; }
@@ -83,7 +83,6 @@ nav {
     <button onclick="showPanel('followup')">Follow-Up</button>
     <button onclick="showPanel('listing')">Listings</button>
     <button onclick="showPanel('booking')">Booking</button>
-
     <button onclick="goLogin()">Login</button>
     <button onclick="goPricing()">Pricing</button>
   </div>
@@ -135,38 +134,41 @@ nav {
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* 🚨 HIDE PAGE FIRST (prevents flash) */
-document.documentElement.style.display = "none";
+/* 🚨 HIDE PAGE FIRST */
+document.body.style.display = "none";
 
-/* 🔗 SUPABASE */
 const supabase = createClient(
   "https://jrmqdojsxjtkjpczaysp.supabase.co",
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* 🔐 AUTH GATE */
+/* 🔥 STRONG AUTH CHECK (FIXED) */
 async function enforceAuth() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data } = await supabase.auth.getSession();
 
-    console.log("SESSION:", session); // optional debug
+    // wait a split second to allow session restore
+    await new Promise(r => setTimeout(r, 300));
+
+    const session = data.session;
 
     if (!session || !session.user) {
       window.location.href = "/login.html";
       return;
     }
 
-    document.documentElement.style.display = "block";
+    // ✅ logged in
+    document.body.style.display = "block";
 
   } catch (err) {
-    console.error("Auth error:", err);
+    console.error(err);
     window.location.href = "/login.html";
   }
 }
 
-await enforceAuth();
+enforceAuth();
 
-/* NAVIGATION */
+/* NAV */
 window.goLogin = () => window.location.href = "/login.html";
 window.goPricing = () => window.location.href = "/payments.html";
 
@@ -202,7 +204,7 @@ window.sendChat = async function(){
   appendMsg(data.reply || 'Error','bot');
 }
 
-/* FOLLOW-UP */
+/* FOLLOWUP */
 window.generateFollowUp = async function(){
   const name=document.getElementById('lead-name').value;
 
@@ -235,15 +237,6 @@ window.generateListing = async function(){
   const data=await res.json();
   document.getElementById('listing-content').innerText=data.reply;
 }
-
-/* SUCCESS HANDLER */
-window.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
-
-  if (params.get("success")) {
-    alert("Payment successful 🎉");
-  }
-});
 </script>
 
 </body>
