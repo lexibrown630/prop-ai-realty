@@ -11,14 +11,11 @@
 <style>
 :root{
   --bg:#0b0f1a;
-  --panel:#111827;
   --card:#1f2937;
   --text:#e5e7eb;
   --muted:#94a3b8;
   --accent:#6366f1;
 }
-
-*{box-sizing:border-box;}
 
 body{
   margin:0;
@@ -27,147 +24,53 @@ body{
   color:var(--text);
 }
 
-/* LAYOUT */
 .app{display:flex;height:100vh;}
 
-/* SIDEBAR */
 .sidebar{
   width:240px;
-  background:rgba(2,6,23,0.9);
-  backdrop-filter:blur(10px);
+  background:#020617;
   padding:20px;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
-  border-right:1px solid rgba(255,255,255,0.05);
-}
-
-.logo{
-  font-weight:600;
-  font-size:18px;
-  margin-bottom:30px;
 }
 
 .nav-item{
-  padding:10px 12px;
-  border-radius:8px;
+  padding:10px;
   cursor:pointer;
   color:var(--muted);
-  transition:all .2s ease;
 }
+.nav-item.active{color:white;}
 
-.nav-item:hover{
-  background:rgba(255,255,255,0.05);
-  color:white;
-}
+.main{flex:1;padding:30px;}
 
-.nav-item.active{
-  background:rgba(99,102,241,0.15);
-  color:white;
-}
-
-/* MAIN */
-.main{
-  flex:1;
-  padding:30px;
-  overflow:auto;
-}
-
-/* FADE ANIMATION */
-.page{
-  display:none;
-  animation:fade .25s ease;
-}
+.page{display:none;}
 .page.active{display:block;}
 
-@keyframes fade{
-  from{opacity:0;transform:translateY(10px);}
-  to{opacity:1;transform:translateY(0);}
-}
-
-/* HEADER */
-.header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:30px;
-}
-
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:20px;
-}
-
-/* CARD */
 .card{
-  background:linear-gradient(145deg,#1f2937,#111827);
-  padding:22px;
-  border-radius:14px;
-  transition:.25s ease;
-  border:1px solid rgba(255,255,255,0.04);
+  background:var(--card);
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:20px;
 }
 
-.card:hover{
-  transform:translateY(-4px);
-  box-shadow:0 10px 30px rgba(0,0,0,0.4);
-}
-
-/* BUTTON */
 .btn{
   background:var(--accent);
   border:none;
-  padding:10px 14px;
-  border-radius:8px;
+  padding:10px;
+  border-radius:6px;
   cursor:pointer;
   color:white;
-  transition:.2s;
 }
 
-.btn:hover{transform:translateY(-1px);}
-.btn:active{transform:scale(.96);}
-
-/* INPUT */
-input{
+input,select{
   width:100%;
-  padding:12px;
-  border-radius:8px;
-  border:none;
   margin-top:10px;
+  padding:10px;
   background:#020617;
+  border:none;
   color:white;
-}
-
-/* CHAT */
-.chat{
-  height:300px;
-  overflow:auto;
-  background:#020617;
-  padding:12px;
-  border-radius:10px;
-}
-
-.msg{
-  margin-bottom:8px;
-  opacity:0;
-  animation:fade .2s forwards;
-}
-
-/* USAGE */
-.usage-bar{
-  height:6px;
-  background:#1e293b;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:8px;
-}
-
-.usage-fill{
-  height:100%;
-  background:var(--accent);
-  width:0%;
-  transition:width .4s ease;
+  border-radius:6px;
 }
 </style>
 
@@ -177,74 +80,99 @@ input{
 
 <div class="app">
 
-<!-- SIDEBAR -->
-
 <div class="sidebar">
   <div>
-    <div class="logo">PropAI</div>
-
-```
-<div class="nav-item active" onclick="nav(this,'dashboard')">Dashboard</div>
-<div class="nav-item" onclick="nav(this,'followup')">Follow-Up</div>
-<div class="nav-item" onclick="nav(this,'listing')">Listings</div>
-<div class="nav-item" onclick="nav(this,'chat')">Assistant</div>
-```
-
+    <div class="nav-item active" onclick="nav(this,'dashboard')">Dashboard</div>
+    <div class="nav-item" onclick="nav(this,'followup')">Follow-Up</div>
+    <div class="nav-item" onclick="nav(this,'listing')">Listings</div>
+    <div class="nav-item" onclick="nav(this,'chat')">Assistant</div>
   </div>
 
   <div>
     <div id="plan">Starter</div>
-    <div id="usageText">0/10</div>
-    <div class="usage-bar"><div id="usageFill" class="usage-fill"></div></div>
-    <button class="btn" onclick="openBilling()" style="margin-top:10px;">Billing</button>
+    <div style="font-size:12px;color:#94a3b8;">Fair use enabled</div>
+    <button class="btn" onclick="openBilling()">Billing</button>
   </div>
 </div>
-
-<!-- MAIN -->
 
 <div class="main">
 
 <div id="page-dashboard" class="page active">
-  <div class="header"><h2>Dashboard</h2></div>
+  <h2>Dashboard</h2>
 
-  <div class="grid">
-    <div class="card">
-      <h3>Follow-Up</h3>
-      <button class="btn" onclick="go('followup')">Open</button>
-    </div>
+  <div class="card">
+    <h3>Follow-Up</h3>
+    <button class="btn" onclick="go('followup')">Open</button>
+  </div>
 
-```
-<div class="card">
-  <h3>Listings</h3>
-  <button class="btn" onclick="go('listing')">Open</button>
-</div>
+  <div class="card">
+    <h3>Listings</h3>
+    <button class="btn" onclick="go('listing')">Open</button>
+  </div>
 
-<div class="card">
-  <h3>Assistant</h3>
-  <button class="btn" onclick="go('chat')">Open</button>
-</div>
-```
-
+  <div class="card">
+    <h3>Assistant</h3>
+    <button class="btn" onclick="go('chat')">Open</button>
   </div>
 </div>
 
+<!-- FOLLOW UP -->
+
 <div id="page-followup" class="page">
-  <h2>Follow-Up</h2>
+  <h2>Follow-Up Generator</h2>
+
   <input id="lead" placeholder="Lead name">
-  <button class="btn" onclick="followUp()">Generate</button>
+
+  <select id="tone">
+    <option>Friendly</option>
+    <option>Professional</option>
+    <option>Urgent</option>
+  </select>
+
+  <select id="goal">
+    <option>Book a call</option>
+    <option>Nurture relationship</option>
+    <option>Close deal</option>
+  </select>
+
+<button class="btn" onclick="followUp()">Generate</button>
+
   <pre id="follow-output"></pre>
+
 </div>
 
+<!-- LISTING -->
+
 <div id="page-listing" class="page">
-  <h2>Listings</h2>
+  <h2>Listing Generator</h2>
+
   <input id="address" placeholder="Address">
-  <button class="btn" onclick="listing()">Generate</button>
+  <input id="price" placeholder="Price">
+  <input id="beds" placeholder="Bedrooms">
+
+  <select id="propertyType">
+    <option>House</option>
+    <option>Condo</option>
+    <option>Luxury Estate</option>
+  </select>
+
+  <select id="listingTone">
+    <option>Luxury</option>
+    <option>Casual</option>
+    <option>Investor-focused</option>
+  </select>
+
+<button class="btn" onclick="listing()">Generate</button>
+
   <pre id="listing-output"></pre>
+
 </div>
+
+<!-- CHAT -->
 
 <div id="page-chat" class="page">
   <h2>Assistant</h2>
-  <div id="chatbox" class="chat"></div>
+  <div id="chatbox"></div>
   <input id="msg" placeholder="Message..." onkeydown="if(event.key==='Enter')chat()">
   <button class="btn" onclick="chat()">Send</button>
 </div>
@@ -257,39 +185,25 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase=createClient("https://jrmqdojsxjtkjpczaysp.supabase.co","sb_publishable_...");
 
-let usage=0,limit=10,plan="starter";
-
 /* AUTH */
 const {data}=await supabase.auth.getSession();
 if(!data.session) location.href="/login.html";
 
-/* LOAD */
+/* LOAD USER */
 const user=await supabase.from("users").select("*").eq("id",data.session.user.id).single();
-if(user.data){
-  usage=user.data.usage_count||0;
-  plan=user.data.plan||"starter";
-}
-limit=plan==="starter"?10:plan==="pro"?100:999999;
-
-updateUI();
-
-/* UI */
-function updateUI(){
-  document.getElementById("plan").innerText=plan.toUpperCase();
-  document.getElementById("usageText").innerText=`${usage}/${limit}`;
-  document.getElementById("usageFill").style.width=(usage/limit*100)+"%";
-}
+let plan=user.data?.plan||"starter";
+document.getElementById("plan").innerText=plan.toUpperCase();
 
 /* NAV */
-window.nav=(el,p)=>{
+function nav(el,p){
   document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));
   el.classList.add("active");
   go(p);
-};
-window.go=(p)=>{
+}
+function go(p){
   document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
   document.getElementById("page-"+p).classList.add("active");
-};
+}
 
 /* API */
 async function api(body){
@@ -304,52 +218,72 @@ async function api(body){
   });
 }
 
-/* CHAT */
-window.chat=async()=>{
-  if(usage>=limit) return alert("Limit reached");
+/* FOLLOW UP */
+async function followUp(){
+  const name=document.getElementById("lead").value;
+  const tone=document.getElementById("tone").value;
+  const goal=document.getElementById("goal").value;
 
+  const res=await api({
+    message:`Write a ${tone} real estate follow-up to ${name} with the goal to ${goal}`,
+    type:"followup"
+  });
+
+  const data=await res.json();
+  document.getElementById("follow-output").innerText=data.reply;
+}
+
+/* LISTING */
+async function listing(){
+  if(plan==="starter") return alert("Upgrade required");
+
+  const addr=document.getElementById("address").value;
+  const price=document.getElementById("price").value;
+  const beds=document.getElementById("beds").value;
+  const type=document.getElementById("propertyType").value;
+  const tone=document.getElementById("listingTone").value;
+
+  const res=await api({
+    message:`Create a ${tone} listing for a ${type} at ${addr}, priced at ${price}, ${beds} bedrooms`,
+    type:"listing"
+  });
+
+  const data=await res.json();
+  document.getElementById("listing-output").innerText=data.reply;
+}
+
+/* CHAT */
+async function chat(){
   const msg=document.getElementById("msg").value;
+
   const res=await api({message:msg});
   const data=await res.json();
 
   const el=document.createElement("div");
-  el.className="msg";
   el.innerText=data.reply;
   document.getElementById("chatbox").appendChild(el);
-
-  usage++; updateUI();
-};
-
-/* FOLLOW */
-window.followUp=async()=>{
-  if(usage>=limit) return alert("Limit reached");
-
-  const name=document.getElementById("lead").value;
-  const res=await api({message:`Follow up with ${name}`,type:"followup"});
-  const data=await res.json();
-
-  document.getElementById("follow-output").innerText=data.reply;
-  usage++; updateUI();
-};
-
-/* LISTING */
-window.listing=async()=>{
-  if(plan==="starter") return alert("Upgrade required");
-  if(usage>=limit) return alert("Limit reached");
-
-  const addr=document.getElementById("address").value;
-  const res=await api({message:`Listing for ${addr}`,type:"listing"});
-  const data=await res.json();
-
-  document.getElementById("listing-output").innerText=data.reply;
-  usage++; updateUI();
-};
+}
 
 /* BILLING */
-window.openBilling=async()=>{
-  const res=await fetch('/.netlify/functions/stripe-portal',{method:'POST'});
+async function openBilling(){
+  const {data:{session}}=await supabase.auth.getSession();
+
+  const res=await fetch('/.netlify/functions/stripe-portal',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:session.user.email})
+  });
+
   location.href=(await res.json()).url;
-};
+}
+
+/* expose for buttons */
+window.nav=nav;
+window.go=go;
+window.followUp=followUp;
+window.listing=listing;
+window.chat=chat;
+window.openBilling=openBilling;
 </script>
 
 </body>
