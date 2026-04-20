@@ -4,42 +4,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PropAI Dashboard</title>
+<title>PropAI</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
 :root{
-  --bg:#0f172a;
+  --bg:#0b0f1a;
   --panel:#111827;
   --card:#1f2937;
   --text:#e5e7eb;
-  --muted:#9ca3af;
+  --muted:#94a3b8;
   --accent:#6366f1;
 }
 
 *{box-sizing:border-box;}
+
 body{
   margin:0;
   font-family:'Inter',sans-serif;
-  background:var(--bg);
+  background:linear-gradient(180deg,#020617,#0b0f1a);
   color:var(--text);
 }
 
 /* LAYOUT */
-.app{
-  display:flex;
-  height:100vh;
-}
+.app{display:flex;height:100vh;}
 
 /* SIDEBAR */
 .sidebar{
   width:240px;
-  background:#020617;
+  background:rgba(2,6,23,0.9);
+  backdrop-filter:blur(10px);
   padding:20px;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
+  border-right:1px solid rgba(255,255,255,0.05);
 }
 
 .logo{
@@ -49,13 +49,20 @@ body{
 }
 
 .nav-item{
-  padding:10px;
+  padding:10px 12px;
   border-radius:8px;
   cursor:pointer;
   color:var(--muted);
+  transition:all .2s ease;
 }
+
 .nav-item:hover{
-  background:#111827;
+  background:rgba(255,255,255,0.05);
+  color:white;
+}
+
+.nav-item.active{
+  background:rgba(99,102,241,0.15);
   color:white;
 }
 
@@ -66,6 +73,19 @@ body{
   overflow:auto;
 }
 
+/* FADE ANIMATION */
+.page{
+  display:none;
+  animation:fade .25s ease;
+}
+.page.active{display:block;}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* HEADER */
 .header{
   display:flex;
   justify-content:space-between;
@@ -73,17 +93,25 @@ body{
   margin-bottom:30px;
 }
 
-/* CARDS */
+/* GRID */
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
   gap:20px;
 }
 
+/* CARD */
 .card{
-  background:var(--card);
-  padding:20px;
-  border-radius:12px;
+  background:linear-gradient(145deg,#1f2937,#111827);
+  padding:22px;
+  border-radius:14px;
+  transition:.25s ease;
+  border:1px solid rgba(255,255,255,0.04);
+}
+
+.card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 10px 30px rgba(0,0,0,0.4);
 }
 
 /* BUTTON */
@@ -94,6 +122,21 @@ body{
   border-radius:8px;
   cursor:pointer;
   color:white;
+  transition:.2s;
+}
+
+.btn:hover{transform:translateY(-1px);}
+.btn:active{transform:scale(.96);}
+
+/* INPUT */
+input{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:none;
+  margin-top:10px;
+  background:#020617;
+  color:white;
 }
 
 /* CHAT */
@@ -101,22 +144,30 @@ body{
   height:300px;
   overflow:auto;
   background:#020617;
-  padding:10px;
+  padding:12px;
   border-radius:10px;
 }
 
-input{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border-radius:6px;
-  border:none;
+.msg{
+  margin-bottom:8px;
+  opacity:0;
+  animation:fade .2s forwards;
 }
 
 /* USAGE */
-.usage{
-  font-size:13px;
-  color:var(--muted);
+.usage-bar{
+  height:6px;
+  background:#1e293b;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.usage-fill{
+  height:100%;
+  background:var(--accent);
+  width:0%;
+  transition:width .4s ease;
 }
 </style>
 
@@ -133,18 +184,19 @@ input{
     <div class="logo">PropAI</div>
 
 ```
-<div class="nav-item" onclick="showPage('dashboard')">Dashboard</div>
-<div class="nav-item" onclick="showPage('followup')">Follow-Up</div>
-<div class="nav-item" onclick="showPage('listing')">Listings</div>
-<div class="nav-item" onclick="showPage('chat')">Assistant</div>
+<div class="nav-item active" onclick="nav(this,'dashboard')">Dashboard</div>
+<div class="nav-item" onclick="nav(this,'followup')">Follow-Up</div>
+<div class="nav-item" onclick="nav(this,'listing')">Listings</div>
+<div class="nav-item" onclick="nav(this,'chat')">Assistant</div>
 ```
 
   </div>
 
   <div>
-    <div id="plan">Starter Plan</div>
-    <div class="usage" id="usage">0/10 used</div>
-    <button class="btn" onclick="openBilling()">Billing</button>
+    <div id="plan">Starter</div>
+    <div id="usageText">0/10</div>
+    <div class="usage-bar"><div id="usageFill" class="usage-fill"></div></div>
+    <button class="btn" onclick="openBilling()" style="margin-top:10px;">Billing</button>
   </div>
 </div>
 
@@ -152,60 +204,50 @@ input{
 
 <div class="main">
 
-  <!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="header"><h2>Dashboard</h2></div>
 
-  <div id="page-dashboard">
-    <div class="header">
-      <h2>Dashboard</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Follow-Up</h3>
+      <button class="btn" onclick="go('followup')">Open</button>
     </div>
 
 ```
-<div class="grid">
-  <div class="card">
-    <h3>Generate Follow-Up</h3>
-    <button class="btn" onclick="showPage('followup')">Open</button>
-  </div>
+<div class="card">
+  <h3>Listings</h3>
+  <button class="btn" onclick="go('listing')">Open</button>
+</div>
 
-  <div class="card">
-    <h3>Create Listing</h3>
-    <button class="btn" onclick="showPage('listing')">Open</button>
-  </div>
-
-  <div class="card">
-    <h3>AI Assistant</h3>
-    <button class="btn" onclick="showPage('chat')">Open</button>
-  </div>
+<div class="card">
+  <h3>Assistant</h3>
+  <button class="btn" onclick="go('chat')">Open</button>
 </div>
 ```
 
   </div>
+</div>
 
-  <!-- FOLLOWUP -->
+<div id="page-followup" class="page">
+  <h2>Follow-Up</h2>
+  <input id="lead" placeholder="Lead name">
+  <button class="btn" onclick="followUp()">Generate</button>
+  <pre id="follow-output"></pre>
+</div>
 
-  <div id="page-followup" style="display:none">
-    <h2>Follow-Up Generator</h2>
-    <input id="lead" placeholder="Lead name">
-    <button class="btn" onclick="followUp()">Generate</button>
-    <pre id="follow-output"></pre>
-  </div>
+<div id="page-listing" class="page">
+  <h2>Listings</h2>
+  <input id="address" placeholder="Address">
+  <button class="btn" onclick="listing()">Generate</button>
+  <pre id="listing-output"></pre>
+</div>
 
-  <!-- LISTING -->
-
-  <div id="page-listing" style="display:none">
-    <h2>Listing Generator</h2>
-    <input id="address" placeholder="Property address">
-    <button class="btn" onclick="listing()">Generate</button>
-    <pre id="listing-output"></pre>
-  </div>
-
-  <!-- CHAT -->
-
-  <div id="page-chat" style="display:none">
-    <h2>AI Assistant</h2>
-    <div id="chatbox" class="chat"></div>
-    <input id="msg" placeholder="Type..." onkeydown="if(event.key==='Enter')chat()">
-    <button class="btn" onclick="chat()">Send</button>
-  </div>
+<div id="page-chat" class="page">
+  <h2>Assistant</h2>
+  <div id="chatbox" class="chat"></div>
+  <input id="msg" placeholder="Message..." onkeydown="if(event.key==='Enter')chat()">
+  <button class="btn" onclick="chat()">Send</button>
+</div>
 
 </div>
 </div>
@@ -213,10 +255,7 @@ input{
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabase=createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  "sb_publishable_..."
-);
+const supabase=createClient("https://jrmqdojsxjtkjpczaysp.supabase.co","sb_publishable_...");
 
 let usage=0,limit=10,plan="starter";
 
@@ -224,29 +263,35 @@ let usage=0,limit=10,plan="starter";
 const {data}=await supabase.auth.getSession();
 if(!data.session) location.href="/login.html";
 
-/* LOAD USER */
-const user=await supabase.from("users")
-  .select("*")
-  .eq("id",data.session.user.id)
-  .single();
-
+/* LOAD */
+const user=await supabase.from("users").select("*").eq("id",data.session.user.id).single();
 if(user.data){
   usage=user.data.usage_count||0;
   plan=user.data.plan||"starter";
 }
-
 limit=plan==="starter"?10:plan==="pro"?100:999999;
 
-document.getElementById("plan").innerText=plan.toUpperCase();
-document.getElementById("usage").innerText=`${usage}/${limit}`;
+updateUI();
+
+/* UI */
+function updateUI(){
+  document.getElementById("plan").innerText=plan.toUpperCase();
+  document.getElementById("usageText").innerText=`${usage}/${limit}`;
+  document.getElementById("usageFill").style.width=(usage/limit*100)+"%";
+}
 
 /* NAV */
-window.showPage=(p)=>{
-  document.querySelectorAll("[id^=page-]").forEach(x=>x.style.display="none");
-  document.getElementById("page-"+p).style.display="block";
+window.nav=(el,p)=>{
+  document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));
+  el.classList.add("active");
+  go(p);
+};
+window.go=(p)=>{
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  document.getElementById("page-"+p).classList.add("active");
 };
 
-/* FETCH */
+/* API */
 async function api(body){
   const {data:{session}}=await supabase.auth.getSession();
   return fetch('/.netlify/functions/chat',{
@@ -267,11 +312,15 @@ window.chat=async()=>{
   const res=await api({message:msg});
   const data=await res.json();
 
-  document.getElementById("chatbox").innerHTML+=`<div>${data.reply}</div>`;
-  usage++;
+  const el=document.createElement("div");
+  el.className="msg";
+  el.innerText=data.reply;
+  document.getElementById("chatbox").appendChild(el);
+
+  usage++; updateUI();
 };
 
-/* FOLLOWUP */
+/* FOLLOW */
 window.followUp=async()=>{
   if(usage>=limit) return alert("Limit reached");
 
@@ -280,7 +329,7 @@ window.followUp=async()=>{
   const data=await res.json();
 
   document.getElementById("follow-output").innerText=data.reply;
-  usage++;
+  usage++; updateUI();
 };
 
 /* LISTING */
@@ -288,19 +337,18 @@ window.listing=async()=>{
   if(plan==="starter") return alert("Upgrade required");
   if(usage>=limit) return alert("Limit reached");
 
-  const address=document.getElementById("address").value;
-  const res=await api({message:`Listing for ${address}`,type:"listing"});
+  const addr=document.getElementById("address").value;
+  const res=await api({message:`Listing for ${addr}`,type:"listing"});
   const data=await res.json();
 
   document.getElementById("listing-output").innerText=data.reply;
-  usage++;
+  usage++; updateUI();
 };
 
 /* BILLING */
 window.openBilling=async()=>{
   const res=await fetch('/.netlify/functions/stripe-portal',{method:'POST'});
-  const data=await res.json();
-  location.href=data.url;
+  location.href=(await res.json()).url;
 };
 </script>
 
