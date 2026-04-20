@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -94,6 +95,7 @@ nav {
   width:0%;
 }
 </style>
+
 </head>
 
 <body>
@@ -172,7 +174,7 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* USER STATE */
+/* STATE */
 let userPlan = "starter";
 let usageCount = 0;
 let usageLimit = 10;
@@ -191,7 +193,7 @@ async function enforceAuth() {
   document.body.style.display = "block";
 }
 
-/* LOAD PLAN + USAGE */
+/* LOAD USER */
 async function loadUserData(userId){
   const { data } = await supabase
     .from("users")
@@ -204,7 +206,6 @@ async function loadUserData(userId){
     usageCount = data.usage_count || 0;
   }
 
-  /* PLAN LIMITS */
   if (userPlan === "starter") usageLimit = 10;
   if (userPlan === "pro") usageLimit = 100;
   if (userPlan === "agency") usageLimit = 999999;
@@ -212,7 +213,7 @@ async function loadUserData(userId){
   updateUI();
 }
 
-/* UI UPDATE */
+/* UI */
 function updateUI(){
   document.getElementById("plan-badge").innerText =
     userPlan.charAt(0).toUpperCase() + userPlan.slice(1);
@@ -220,36 +221,27 @@ function updateUI(){
   document.getElementById("usage-text").innerText =
     `Usage: ${usageCount}/${usageLimit === 999999 ? "∞" : usageLimit}`;
 
-  const percent = (usageCount / usageLimit) * 100;
+  const percent = Math.min((usageCount / usageLimit) * 100, 100);
   document.getElementById("usage-fill").style.width = percent + "%";
 }
 
-/* FEATURE LOCK */
-function checkAccess(feature){
-  if (userPlan === "starter" && feature === "listing"){
-    alert("Upgrade to Pro to unlock Listings");
-    return false;
-  }
-  return true;
-}
+/* AUTHED FETCH */
+async function authedFetch(body){
+  const { data: { session } } = await supabase.auth.getSession();
 
-/* TRACK USAGE */
-async function incrementUsage(){
-  usageCount++;
-  updateUI();
-
-  await supabase
-    .from("users")
-    .update({ usage_count: usageCount })
-    .eq("id", (await supabase.auth.getUser()).data.user.id);
+  return fetch('/.netlify/functions/chat',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify(body)
+  });
 }
 
 /* BILLING */
 window.openBilling = async function(){
-  const res = await fetch('/.netlify/functions/stripe-portal',{
-    method:'POST'
-  });
-
+  const res = await fetch('/.netlify/functions/stripe-portal',{ method:'POST' });
   const data = await res.json();
   window.location.href = data.url;
 }
@@ -270,10 +262,7 @@ function appendMsg(text, cls){
 }
 
 window.sendChat = async function(){
-  if (usageCount >= usageLimit){
-    alert("Usage limit reached");
-    return;
-  }
+  if (usageCount >= usageLimit) return alert("Usage limit reached");
 
   const input=document.getElementById('chat-input');
   const msg=input.value.trim();
@@ -282,59 +271,56 @@ window.sendChat = async function(){
   input.value='';
   appendMsg(msg,'user');
 
-  const res=await fetch('/.netlify/functions/chat',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({message:msg})
-  });
+  const res = await authedFetch({ message: msg });
+  const data = await res.json();
 
-  const data=await res.json();
-  appendMsg(data.reply || 'Error','bot');
+  appendMsg(data.reply || data.error,'bot');
 
-  incrementUsage();
+  if (!data.error){
+    usageCount++;
+    updateUI();
+  }
 }
 
 /* FOLLOWUP */
 window.generateFollowUp = async function(){
-  if (usageCount >= usageLimit) return alert("Limit reached");
+  if (usageCount >= usageLimit) return alert("Usage limit reached");
 
   const name=document.getElementById('lead-name').value;
 
-  const res=await fetch('/.netlify/functions/chat',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      message:`Write a real estate follow-up for ${name}`,
-      type:'followup'
-    })
+  const res = await authedFetch({
+    message:`Write a real estate follow-up for ${name}`,
+    type:'followup'
   });
 
-  const data=await res.json();
-  document.getElementById('email-content').innerText=data.reply;
+  const data = await res.json();
+  document.getElementById('email-content').innerText = data.reply || data.error;
 
-  incrementUsage();
+  if (!data.error){
+    usageCount++;
+    updateUI();
+  }
 }
 
 /* LISTING */
 window.generateListing = async function(){
-  if (!checkAccess("listing")) return;
-  if (usageCount >= usageLimit) return alert("Limit reached");
+  if (userPlan === "starter") return alert("Upgrade to Pro to unlock listings");
+  if (usageCount >= usageLimit) return alert("Usage limit reached");
 
   const address=document.getElementById('prop-address').value;
 
-  const res=await fetch('/.netlify/functions/chat',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      message:`Create MLS listing for ${address}`,
-      type:'listing'
-    })
+  const res = await authedFetch({
+    message:`Create MLS listing for ${address}`,
+    type:'listing'
   });
 
-  const data=await res.json();
-  document.getElementById('listing-content').innerText=data.reply;
+  const data = await res.json();
+  document.getElementById('listing-content').innerText = data.reply || data.error;
 
-  incrementUsage();
+  if (!data.error){
+    usageCount++;
+    updateUI();
+  }
 }
 
 enforceAuth();
