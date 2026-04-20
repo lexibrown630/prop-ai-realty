@@ -17,157 +17,63 @@
   --muted:#94a3b8;
   --accent:#6366f1;
 }
-
 *{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',sans-serif;background:linear-gradient(180deg,#020617,#0b0f1a);color:var(--text);}
 
-body{
-  margin:0;
-  font-family:'Inter',sans-serif;
-  background:linear-gradient(180deg,#020617,#0b0f1a);
-  color:var(--text);
-}
-
-/* LAYOUT */
 .app{display:flex;height:100vh;}
 
-/* SIDEBAR */
 .sidebar{
-  width:240px;
-  background:rgba(2,6,23,0.9);
+  width:240px;background:rgba(2,6,23,0.9);
   backdrop-filter:blur(10px);
-  padding:20px;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
+  padding:20px;display:flex;flex-direction:column;justify-content:space-between;
   border-right:1px solid rgba(255,255,255,0.05);
 }
+.logo{font-weight:600;font-size:18px;margin-bottom:30px;}
 
-.logo{
-  font-weight:600;
-  font-size:18px;
-  margin-bottom:30px;
-}
+.nav-item{padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:white;}
+.nav-item.active{background:rgba(99,102,241,0.15);color:white;}
 
-.nav-item{
-  padding:10px 12px;
-  border-radius:8px;
-  cursor:pointer;
-  color:var(--muted);
-  transition:all .2s ease;
-}
+.main{flex:1;padding:30px;overflow:auto;}
 
-.nav-item:hover{
-  background:rgba(255,255,255,0.05);
-  color:white;
-}
-
-.nav-item.active{
-  background:rgba(99,102,241,0.15);
-  color:white;
-}
-
-/* MAIN */
-.main{
-  flex:1;
-  padding:30px;
-  overflow:auto;
-}
-
-/* FADE ANIMATION */
-.page{
-  display:none;
-  animation:fade .25s ease;
-}
+.page{display:none;animation:fade .25s ease;}
 .page.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(10px);}to{opacity:1;}}
 
-@keyframes fade{
-  from{opacity:0;transform:translateY(10px);}
-  to{opacity:1;transform:translateY(0);}
-}
+.header{display:flex;justify-content:space-between;margin-bottom:30px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;}
 
-/* HEADER */
-.header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:30px;
-}
-
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:20px;
-}
-
-/* CARD */
 .card{
   background:linear-gradient(145deg,#1f2937,#111827);
-  padding:22px;
-  border-radius:14px;
-  transition:.25s ease;
-  border:1px solid rgba(255,255,255,0.04);
+  padding:22px;border-radius:14px;
 }
+.card:hover{transform:translateY(-4px);}
 
-.card:hover{
-  transform:translateY(-4px);
-  box-shadow:0 10px 30px rgba(0,0,0,0.4);
-}
-
-/* BUTTON */
 .btn{
   background:var(--accent);
-  border:none;
-  padding:10px 14px;
-  border-radius:8px;
-  cursor:pointer;
-  color:white;
-  transition:.2s;
+  border:none;padding:10px 14px;border-radius:8px;
+  cursor:pointer;color:white;
 }
 
-.btn:hover{transform:translateY(-1px);}
-.btn:active{transform:scale(.96);}
-
-/* INPUT */
 input{
-  width:100%;
-  padding:12px;
-  border-radius:8px;
-  border:none;
-  margin-top:10px;
-  background:#020617;
-  color:white;
+  width:100%;padding:12px;border-radius:8px;border:none;
+  margin-top:10px;background:#020617;color:white;
 }
 
-/* CHAT */
-.chat{
-  height:300px;
-  overflow:auto;
-  background:#020617;
-  padding:12px;
-  border-radius:10px;
-}
+.chat{height:300px;overflow:auto;background:#020617;padding:12px;border-radius:10px;}
+.msg{margin-bottom:8px;}
 
-.msg{
-  margin-bottom:8px;
-  opacity:0;
-  animation:fade .2s forwards;
-}
+.usage-bar{height:6px;background:#1e293b;border-radius:10px;margin-top:8px;}
+.usage-fill{height:100%;background:var(--accent);width:0%;}
 
-/* USAGE */
-.usage-bar{
-  height:6px;
-  background:#1e293b;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:8px;
+/* PAYWALL */
+.modal{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.6);
+  display:none;justify-content:center;align-items:center;
 }
-
-.usage-fill{
-  height:100%;
-  background:var(--accent);
-  width:0%;
-  transition:width .4s ease;
+.modal-box{
+  background:#111827;padding:30px;border-radius:14px;width:350px;text-align:center;
 }
 </style>
 
@@ -177,30 +83,27 @@ input{
 
 <div class="app">
 
-<!-- SIDEBAR -->
-
 <div class="sidebar">
   <div>
     <div class="logo">PropAI</div>
-
-```
-<div class="nav-item active" onclick="nav(this,'dashboard')">Dashboard</div>
-<div class="nav-item" onclick="nav(this,'followup')">Follow-Up</div>
-<div class="nav-item" onclick="nav(this,'listing')">Listings</div>
-<div class="nav-item" onclick="nav(this,'chat')">Assistant</div>
-```
-
+    <div class="nav-item active" onclick="nav(this,'dashboard')">Dashboard</div>
+    <div class="nav-item" onclick="nav(this,'followup')">Follow-Up</div>
+    <div class="nav-item" onclick="nav(this,'listing')">Listings</div>
+    <div class="nav-item" onclick="nav(this,'chat')">Assistant</div>
   </div>
 
   <div>
-    <div id="plan">Starter</div>
+    <div id="plan">STARTER</div>
     <div id="usageText">0/10</div>
     <div class="usage-bar"><div id="usageFill" class="usage-fill"></div></div>
-    <button class="btn" onclick="openBilling()" style="margin-top:10px;">Billing</button>
+
+```
+<button class="btn" onclick="openBilling()" style="margin-top:10px;">Billing</button>
+<button class="btn" onclick="showPaywall()" style="margin-top:10px;background:#374151;">Upgrade</button>
+```
+
   </div>
 </div>
-
-<!-- MAIN -->
 
 <div class="main">
 
@@ -208,23 +111,9 @@ input{
   <div class="header"><h2>Dashboard</h2></div>
 
   <div class="grid">
-    <div class="card">
-      <h3>Follow-Up</h3>
-      <button class="btn" onclick="go('followup')">Open</button>
-    </div>
-
-```
-<div class="card">
-  <h3>Listings</h3>
-  <button class="btn" onclick="go('listing')">Open</button>
-</div>
-
-<div class="card">
-  <h3>Assistant</h3>
-  <button class="btn" onclick="go('chat')">Open</button>
-</div>
-```
-
+    <div class="card"><h3>Follow-Up</h3><button class="btn" onclick="go('followup')">Open</button></div>
+    <div class="card"><h3>Listings</h3><button class="btn" onclick="go('listing')">Open</button></div>
+    <div class="card"><h3>Assistant</h3><button class="btn" onclick="go('chat')">Open</button></div>
   </div>
 </div>
 
@@ -252,6 +141,17 @@ input{
 </div>
 </div>
 
+<!-- PAYWALL -->
+
+<div id="paywall" class="modal">
+  <div class="modal-box">
+    <h2>Upgrade Required</h2>
+    <p>Unlock listings + higher limits</p>
+    <button class="btn" onclick="startCheckout('pro')">Upgrade to Pro</button>
+    <button class="btn" onclick="startCheckout('agency')" style="margin-top:10px;background:#374151;">Go Agency</button>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -263,20 +163,20 @@ let usage=0,limit=10,plan="starter";
 const {data}=await supabase.auth.getSession();
 if(!data.session) location.href="/login.html";
 
-/* LOAD */
+/* LOAD USER */
 const user=await supabase.from("users").select("*").eq("id",data.session.user.id).single();
 if(user.data){
   usage=user.data.usage_count||0;
   plan=user.data.plan||"starter";
 }
-limit=plan==="starter"?10:plan==="pro"?100:999999;
 
+limit=plan==="starter"?10:plan==="pro"?100:999999;
 updateUI();
 
 /* UI */
 function updateUI(){
   document.getElementById("plan").innerText=plan.toUpperCase();
-  document.getElementById("usageText").innerText=`${usage}/${limit}`;
+  document.getElementById("usageText").innerText=`${usage}/${limit===999999?"∞":limit}`;
   document.getElementById("usageFill").style.width=(usage/limit*100)+"%";
 }
 
@@ -291,6 +191,9 @@ window.go=(p)=>{
   document.getElementById("page-"+p).classList.add("active");
 };
 
+/* PAYWALL */
+window.showPaywall=()=>document.getElementById("paywall").style.display="flex";
+
 /* API */
 async function api(body){
   const {data:{session}}=await supabase.auth.getSession();
@@ -304,25 +207,57 @@ async function api(body){
   });
 }
 
-/* CHAT */
-window.chat=async()=>{
-  if(usage>=limit) return alert("Limit reached");
+/* CHECKOUT */
+window.startCheckout=async(planType)=>{
+  const {data:{session}}=await supabase.auth.getSession();
+  const email=session.user.email;
 
+  let priceId=null;
+  if(planType==="pro") priceId="price_1TN46TRqy7IFyseNHEiBa8xe";
+  if(planType==="agency") priceId="price_1TN47TRqy7IFyseNqnUSkEoO";
+
+  const res=await fetch('/.netlify/functions/create-checkout',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({priceId,email})
+  });
+
+  const data=await res.json();
+  if(!data.url) return alert(data.error||"Checkout failed");
+
+  location.href=data.url;
+};
+
+/* BILLING */
+window.openBilling=async()=>{
+  const {data:{session}}=await supabase.auth.getSession();
+
+  const res=await fetch('/.netlify/functions/stripe-portal',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:session.user.email})
+  });
+
+  location.href=(await res.json()).url;
+};
+
+/* FEATURES */
+window.chat=async()=>{
+  if(usage>=limit) return showPaywall();
   const msg=document.getElementById("msg").value;
+
   const res=await api({message:msg});
   const data=await res.json();
 
   const el=document.createElement("div");
-  el.className="msg";
-  el.innerText=data.reply;
+  el.className="msg"; el.innerText=data.reply;
   document.getElementById("chatbox").appendChild(el);
 
   usage++; updateUI();
 };
 
-/* FOLLOW */
 window.followUp=async()=>{
-  if(usage>=limit) return alert("Limit reached");
+  if(usage>=limit) return showPaywall();
 
   const name=document.getElementById("lead").value;
   const res=await api({message:`Follow up with ${name}`,type:"followup"});
@@ -332,10 +267,9 @@ window.followUp=async()=>{
   usage++; updateUI();
 };
 
-/* LISTING */
 window.listing=async()=>{
-  if(plan==="starter") return alert("Upgrade required");
-  if(usage>=limit) return alert("Limit reached");
+  if(plan==="starter") return showPaywall();
+  if(usage>=limit) return showPaywall();
 
   const addr=document.getElementById("address").value;
   const res=await api({message:`Listing for ${addr}`,type:"listing"});
@@ -343,12 +277,6 @@ window.listing=async()=>{
 
   document.getElementById("listing-output").innerText=data.reply;
   usage++; updateUI();
-};
-
-/* BILLING */
-window.openBilling=async()=>{
-  const res=await fetch('/.netlify/functions/stripe-portal',{method:'POST'});
-  location.href=(await res.json()).url;
 };
 </script>
 
