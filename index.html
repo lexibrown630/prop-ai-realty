@@ -30,6 +30,7 @@ nav {
   cursor:pointer;
   font-size:13px;
 }
+
 .panel { display:none; padding:30px; max-width:1100px; margin:auto; }
 .panel.active { display:block; }
 
@@ -102,18 +103,56 @@ nav {
   justify-content:center;
   align-items:center;
 }
+
 .modal-content {
   background:white;
   padding:30px;
   border-radius:16px;
-  max-width:400px;
-  text-align:center;
+  max-width:650px;
+  width:90%;
 }
-.modal h2 { margin-top:0; }
+
 .close {
-  cursor:pointer;
   float:right;
-  font-size:18px;
+  cursor:pointer;
+}
+
+.plans {
+  display:flex;
+  gap:15px;
+  margin-top:20px;
+}
+
+.plan {
+  flex:1;
+  border:1px solid #eee;
+  border-radius:12px;
+  padding:15px;
+}
+
+.plan.pro {
+  border:2px solid var(--gold);
+  transform:scale(1.05);
+}
+
+.price {
+  font-size:22px;
+  font-weight:700;
+  margin:10px 0;
+}
+
+.price span {
+  font-size:12px;
+  color:#777;
+}
+
+.plan ul {
+  padding-left:18px;
+  font-size:13px;
+}
+
+.secondary {
+  background:#ddd;
 }
 </style>
 
@@ -184,33 +223,61 @@ nav {
 
 </main>
 
-<!-- PAYWALL MODAL -->
+<!-- PAYWALL -->
 
 <div id="paywall" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closePaywall()">✖</span>
-    <h2 id="paywall-title">Upgrade Required</h2>
-    <p id="paywall-msg"></p>
-    <button class="btn" onclick="goPricing()">Upgrade Now</button>
+
+```
+<h2 id="paywall-title">Upgrade Your Plan</h2>
+<p id="paywall-msg"></p>
+
+<div class="plans">
+  <div class="plan pro">
+    <h3>Pro</h3>
+    <div class="price">$29<span>/mo</span></div>
+    <ul>
+      <li>✔ 100 generations</li>
+      <li>✔ Listing generator</li>
+      <li>✔ Lead follow-ups</li>
+      <li>✔ Faster AI</li>
+    </ul>
+    <button class="btn" onclick="startCheckout('pro')">Upgrade to Pro</button>
+  </div>
+
+  <div class="plan">
+    <h3>Agency</h3>
+    <div class="price">$79<span>/mo</span></div>
+    <ul>
+      <li>✔ Unlimited usage</li>
+      <li>✔ All features</li>
+      <li>✔ Priority speed</li>
+    </ul>
+    <button class="btn secondary" onclick="startCheckout('agency')">Go Agency</button>
+  </div>
+</div>
+```
+
   </div>
 </div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-document.body.style.display = "none";
+document.body.style.display="none";
 
-const supabase = createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+const supabase=createClient(
+"https://jrmqdojsxjtkjpczaysp.supabase.co",
+"sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
 let userPlan="starter", usageCount=0, usageLimit=10;
 
 /* AUTH */
 async function enforceAuth(){
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return location.href="/login.html";
+  const {data}=await supabase.auth.getSession();
+  if(!data.session) return location.href="/login.html";
 
   await loadUserData(data.session.user.id);
   document.body.style.display="block";
@@ -218,17 +285,16 @@ async function enforceAuth(){
 
 /* LOAD */
 async function loadUserData(id){
-  const { data } = await supabase.from("users")
+  const {data}=await supabase.from("users")
     .select("plan, usage_count")
-    .eq("id", id)
-    .single();
+    .eq("id",id).single();
 
   if(data){
     userPlan=data.plan||"starter";
     usageCount=data.usage_count||0;
   }
 
-  usageLimit = userPlan==="starter"?10 : userPlan==="pro"?100 : 999999;
+  usageLimit=userPlan==="starter"?10:userPlan==="pro"?100:999999;
   updateUI();
 }
 
@@ -243,25 +309,38 @@ function updateUI(){
 
 /* PAYWALL */
 window.showPaywall=function(type){
-  const modal=document.getElementById("paywall");
   const title=document.getElementById("paywall-title");
   const msg=document.getElementById("paywall-msg");
 
   if(type==="limit"){
-    title.innerText="Usage Limit Reached";
-    msg.innerText="You've hit your limit. Upgrade to continue.";
+    title.innerText="You've Hit Your Limit";
+    msg.innerText="Upgrade to continue generating AI content.";
+  } else if(type==="listing"){
+    title.innerText="Unlock Listing Generator";
+    msg.innerText="Upgrade to Pro to create high-converting listings.";
   } else {
-    title.innerText="Upgrade Required";
-    msg.innerText="This feature is available on Pro plan.";
+    title.innerText="Upgrade Your Plan";
+    msg.innerText="Get more power and unlock premium features.";
   }
 
-  modal.style.display="flex";
+  document.getElementById("paywall").style.display="flex";
 }
 window.closePaywall=()=>document.getElementById("paywall").style.display="none";
 
-/* AUTH FETCH */
+/* STRIPE */
+window.startCheckout=async(plan)=>{
+  const res=await fetch('/.netlify/functions/create-checkout',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({plan})
+  });
+  const data=await res.json();
+  location.href=data.url;
+}
+
+/* FETCH */
 async function authedFetch(body){
-  const { data:{session} }=await supabase.auth.getSession();
+  const {data:{session}}=await supabase.auth.getSession();
   return fetch('/.netlify/functions/chat',{
     method:'POST',
     headers:{
