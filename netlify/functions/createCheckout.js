@@ -1,87 +1,97 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.handler = async (event) => {
-  try {
-    // ✅ Only allow POST
-    if (event.httpMethod !== "POST") {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: "Method not allowed" }),
-      };
-    }
+try {
+if (event.httpMethod !== "POST") {
+return {
+statusCode: 405,
+body: JSON.stringify({ error: "Method not allowed" }),
+};
+}
 
-    const { priceId, email } = JSON.parse(event.body || "{}");
+```
+const { priceId, email } = JSON.parse(event.body || "{}");
 
-    console.log("📥 Incoming:", { priceId, email });
+if (!priceId || !email) {
+  return {
+    statusCode: 400,
+    body: JSON.stringify({ error: "Missing priceId or email" }),
+  };
+}
 
-    // 🚨 Validate input
-    if (!priceId || !email) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Missing priceId or email" }),
-      };
-    }
+// 🔥 MAP PRICE → PLAN
+let plan = "starter";
 
-    // 🔥 MAP PRICE → PLAN
-    let plan = "starter";
+if (priceId === "price_1TN45MRqy7IFyseNJtzPtgVC") plan = "starter";
+else if (priceId === "price_1TN46TRqy7IFyseNHEiBa8xe") plan = "pro";
+else if (priceId === "price_1TN47TRqy7IFyseNqnUSkEoO") plan = "agency";
 
-    if (priceId === "price_1TN45MRqy7IFyseNJtzPtgVC") {
-      plan = "starter";
-    } else if (priceId === "price_1TN46TRqy7IFyseNHEiBa8xe") {
-      plan = "pro";
-    } else if (priceId === "price_1TN47TRqy7IFyseNqnUSkEoO") {
-      plan = "agency";
-    }
+// 🔍 CHECK IF CUSTOMER EXISTS
+let customer;
 
-    console.log("🧠 Plan selected:", plan);
+const existingCustomers = await stripe.customers.list({
+  email: email,
+  limit: 1,
+});
 
-    // ✅ CREATE CHECKOUT SESSION
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
+if (existingCustomers.data.length > 0) {
+  customer = existingCustomers.data[0];
+  console.log("👤 Existing customer:", customer.id);
+} else {
+  customer = await stripe.customers.create({
+    email: email,
+  });
+  console.log("🆕 New customer created:", customer.id);
+}
 
-      customer_email: email,
+// ✅ CREATE CHECKOUT SESSION
+const session = await stripe.checkout.sessions.create({
+  mode: "subscription",
 
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+  customer: customer.id, // 🔥 KEY FIX
 
-      // 🔥 THIS IS IMPORTANT FOR WEBHOOK
-      metadata: {
-        plan: plan,
-      },
+  payment_method_types: ["card"],
 
-      success_url: "https://prop-ai-realty.netlify.app/index.html?success=true",
-      cancel_url: "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
-    });
+  line_items: [
+    {
+      price: priceId,
+      quantity: 1,
+    },
+  ],
 
-    console.log("✅ Session created:", session.id);
-    console.log("🔗 Checkout URL:", session.url);
+  metadata: {
+    plan: plan,
+    customer_id: customer.id,
+  },
 
-    // 🚨 SAFETY CHECK
-    if (!session.url) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "No checkout URL returned from Stripe" }),
-      };
-    }
+  success_url: "https://prop-ai-realty.netlify.app/index.html?success=true",
+  cancel_url: "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
+});
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ url: session.url }),
-    };
+if (!session.url) {
+  return {
+    statusCode: 500,
+    body: JSON.stringify({ error: "No checkout URL returned" }),
+  };
+}
 
-  } catch (err) {
-    console.error("❌ STRIPE ERROR:", err);
+return {
+  statusCode: 200,
+  body: JSON.stringify({ url: session.url }),
+};
+```
 
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: err.message || "Internal server error",
-      }),
-    };
-  }
+} catch (err) {
+console.error("❌ STRIPE ERROR:", err);
+
+```
+return {
+  statusCode: 500,
+  body: JSON.stringify({
+    error: err.message || "Internal server error",
+  }),
+};
+```
+
+}
 };
