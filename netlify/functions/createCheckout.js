@@ -20,12 +20,10 @@ if (!priceId || !email) {
 }
 
 // 🔥 MAP PRICE → PLAN
-let plan = "starter";
+let plan = "Main";
 
-if (priceId === "price_1TN45MRqy7IFyseNJtzPtgVC") plan = "starter";
-else if (priceId === "price_1TN46TRqy7IFyseNHEiBa8xe") plan = "pro";
-else if (priceId === "price_1TN47TRqy7IFyseNqnUSkEoO") plan = "agency";
-
+if (priceId === "price_1TP9DMRqy7IFyseNPEDk3coa") plan = "Startup Fee";
+else if (priceId === "price_1TP9BERqy7IFyseNaZDNaYs2") plan = "Main";
 // 🔍 CHECK IF CUSTOMER EXISTS
 let customer;
 
