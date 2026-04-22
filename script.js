@@ -1,7 +1,8 @@
+let chatHistory = [];
 let currentEmbedTab = 'full';
 
 /* =========================
-   NAV / UI (FIXED)
+   NAV / UI
 ========================= */
 
 function showPanel(name) {
@@ -11,9 +12,8 @@ function showPanel(name) {
   const panel = document.getElementById('panel-' + name);
   if (panel) panel.classList.add('active');
 
-  // UPDATED (removed booking index)
   const tabs = document.querySelectorAll('.nav-tab');
-  const map = { tools: 0, followup: 1, listing: 2, embed: 3 };
+  const map = { tools: 0, followup: 1, listing: 2, booking: 3, embed: 4 };
 
   if (map[name] !== undefined && tabs[map[name]]) {
     tabs[map[name]].classList.add('active');
@@ -21,13 +21,63 @@ function showPanel(name) {
 }
 
 /* =========================
-   LISTING GENERATOR (IMPROVED)
+   CHAT (WORKS ALREADY)
+========================= */
+
+function appendMsg(text, cls) {
+  const container = document.getElementById('chat-messages');
+  if (!container) return null;
+
+  const el = document.createElement('div');
+  el.className = 'msg ' + cls;
+  el.innerText = text;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+  return el;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+
+  appendMsg(msg, 'user');
+
+  const typingEl = appendMsg('Alex is typing...', 'bot typing');
+
+  try {
+    const response = await fetch('/.netlify/functions/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg })
+    });
+
+    const data = await response.json();
+    if (typingEl) typingEl.remove();
+
+    if (!response.ok) {
+      appendMsg(data.error || 'Server error', 'bot');
+      return;
+    }
+
+    appendMsg(data.reply, 'bot');
+
+  } catch (err) {
+    if (typingEl) typingEl.remove();
+    appendMsg('Request failed: ' + err.message, 'bot');
+  }
+}
+
+/* =========================
+   LISTING GENERATOR (FIXED)
 ========================= */
 
 async function generateListing() {
   const btn = document.getElementById('listing-btn');
-  if (!btn) return;
-
   btn.disabled = true;
   btn.innerText = "Generating...";
 
@@ -62,22 +112,27 @@ Make it professional, emotional, and high-converting.
     const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: prompt, type: "listing" })
+      body: JSON.stringify({
+        message: prompt,
+        type: "listing"
+      })
     });
 
     const json = await res.json();
 
-    if (!res.ok || !json.reply) {
-      throw new Error(json.error || "Failed to generate listing");
+    if (!res.ok) {
+      content.innerText = json.error || "Error generating listing";
+      resultBox.classList.add('visible');
+      return;
     }
 
     content.innerText = json.reply;
     resultBox.classList.add('visible');
 
-    document.getElementById('copy-listing-btn')?.style.display = 'block';
+    document.getElementById('copy-listing-btn').style.display = 'block';
 
   } catch (err) {
-    content.innerText = "Error: " + err.message;
+    content.innerText = err.message;
     resultBox.classList.add('visible');
   } finally {
     btn.disabled = false;
@@ -86,13 +141,11 @@ Make it professional, emotional, and high-converting.
 }
 
 /* =========================
-   FOLLOW-UP GENERATOR (IMPROVED)
+   FOLLOW-UP GENERATOR (FIXED)
 ========================= */
 
 async function generateFollowUp() {
   const btn = document.getElementById('followup-btn');
-  if (!btn) return;
-
   btn.disabled = true;
   btn.innerText = "Generating...";
 
@@ -113,13 +166,9 @@ Source: ${data.source}
 Intent: ${data.type}
 Notes: ${data.notes}
 
-Return clearly separated:
-
-EMAIL:
-...
-
-SMS:
-...
+Return:
+1 email version
+1 SMS version (short, under 160 chars)
 `;
 
   const emailBox = document.getElementById('email-content');
@@ -132,25 +181,28 @@ SMS:
     const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: prompt, type: "followup" })
+      body: JSON.stringify({
+        message: prompt,
+        type: "followup"
+      })
     });
 
     const json = await res.json();
 
-    if (!res.ok || !json.reply) {
-      throw new Error(json.error || "Failed to generate follow-up");
+    if (!res.ok) {
+      emailBox.innerText = json.error || "Error generating follow-up";
+      smsBox.innerText = "";
+      return;
     }
 
-    // BETTER parsing
-    const emailMatch = json.reply.split("SMS:")[0];
-    const smsMatch = json.reply.split("SMS:")[1];
+    // Simple split (AI returns both)
+    const parts = json.reply.split("SMS");
 
-    emailBox.innerText = emailMatch?.replace("EMAIL:", "").trim() || json.reply;
-    smsBox.innerText = smsMatch?.trim() || "SMS not generated clearly";
+    emailBox.innerText = parts[0] || json.reply;
+    smsBox.innerText = parts[1] || "SMS not separated clearly";
 
   } catch (err) {
-    emailBox.innerText = "Error: " + err.message;
-    smsBox.innerText = "";
+    emailBox.innerText = err.message;
   } finally {
     btn.disabled = false;
     btn.innerText = "Generate follow-up messages";
@@ -172,7 +224,7 @@ function copyListing() {
 }
 
 /* =========================
-   EMBED CODE (CLEANED)
+   EMBED CODE
 ========================= */
 
 function switchEmbedTab(btn, tab) {
@@ -186,7 +238,6 @@ function updateEmbedCode() {
   const agency = document.getElementById('agency-name')?.value || 'Your Agency';
   const color = document.getElementById('primary-color')?.value || '#C9A84C';
   const tools = document.getElementById('embed-tools')?.value || 'all';
-  const label = document.getElementById('bubble-label')?.value || 'Get Started';
   const pos = document.getElementById('bubble-pos')?.value || 'bottom-right';
 
   let code = '';
