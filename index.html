@@ -636,56 +636,9 @@
         <div class="tool-card-header">
           <div class="tool-icon">🔌</div>
           <div>
-            <div class="tool-card-title">Full widget embed</div>
-            <div class="tool-card-subtitle">Drop into any page</div>
-          </div>
-        </div>
-        <div class="tool-card-body">
-          <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;">Paste one snippet into your website HTML. Works on Squarespace, Wix, WordPress, Webflow, or any custom site.</p>
-          <label>Your agency name (for branding)</label>
-          <input type="text" id="agency-name" placeholder="e.g. Coastal Realty Group" oninput="updateEmbedCode()">
-          <label>Primary color (hex)</label>
-          <input type="text" id="primary-color" placeholder="#C9A84C" oninput="updateEmbedCode()">
-          <label>Which tools to show?</label>
-          <select id="embed-tools" oninput="updateEmbedCode()">
-            <option value="all">All 3 tools</option>
-            <option value="followup">Lead Follow-Up only</option>
-            <option value="listing">Listing Generator only</option>
-            <option value="booking">Booking Bot only</option>
-          </select>
-        </div>
-      </div>
-      <div class="tool-card">
-        <div class="tool-card-header">
-          <div class="tool-icon">💻</div>
-          <div>
-            <div class="tool-card-title">Floating chat bubble</div>
-            <div class="tool-card-subtitle">Like Intercom — for real estate</div>
-          </div>
-        </div>
-        <div class="tool-card-body">
-          <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;">A floating button that opens the booking bot overlay on any page — perfect for passive lead capture.</p>
-          <label>Button label</label>
-          <input type="text" id="bubble-label" placeholder="e.g. Book a Showing" oninput="updateEmbedCode()">
-          <label>Position</label>
-          <select id="bubble-pos" oninput="updateEmbedCode()">
-            <option value="bottom-right">Bottom right</option>
-            <option value="bottom-left">Bottom left</option>
-          </select>
         </div>
       </div>
     </div>
-
-    <div class="embed-section">
-      <h3>Your embed code</h3>
-      <p>Copy the snippet for the integration you need and paste it into your site's HTML.</p>
-      <div class="embed-tabs">
-        <button class="embed-tab active" onclick="switchEmbedTab(this,'full')">Full widget</button>
-        <button class="embed-tab" onclick="switchEmbedTab(this,'chat')">Chat bubble</button>
-        <button class="embed-tab" onclick="switchEmbedTab(this,'wp')">WordPress</button>
-      </div>
-      <div class="code-block" id="embed-code-block"></div>
-      <button class="copy-code-btn" onclick="copyEmbedCode()">Copy code</button>
     </div>
   </div>
 
