@@ -2,44 +2,680 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PropAI Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
+<title>PropAI — Real Estate Automation Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8D5A3;
+    --gold-dark: #8B6914;
+    --navy: #0D1B2A;
+    --navy-mid: #1B2D42;
+    --navy-light: #243550;
+    --cream: #FAF8F3;
+    --cream-dark: #F0EBE0;
+    --text: #1a1a2e;
+    --text-muted: #6B7080;
+    --success: #2D7A4F;
+    --success-bg: #E8F5EE;
+    --white: #ffffff;
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
 
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--navy);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    border-bottom: 1px solid var(--navy-light);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    color: var(--gold);
+    font-size: 22px;
+    letter-spacing: 0.5px;
+  }
+  .logo span { color: var(--white); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    background: none;
+    border: none;
+    color: #8899AA;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .nav-tab:hover { color: var(--white); background: var(--navy-light); }
+  .nav-tab.active { color: var(--gold); background: rgba(201,168,76,0.12); }
+  .nav-badge {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--navy);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* MAIN */
+  main { max-width: 1000px;margin: 0 auto;padding: 1.5rem 2rem;}
+  /* HERO */
+  .hero {
+    background: var(--navy);
+    border-radius: var(--radius-lg);
+    padding: 3rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    overflow: hidden;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    border: 1px solid rgba(201,168,76,0.15);
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 20px; right: 20px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    border: 1px solid rgba(201,168,76,0.08);
+  }
+  .hero-text h1 {
+    font-family: 'Playfair Display', serif;
+    color: var(--white);
+    font-size: 32px;
+    line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .hero-text h1 em { color: var(--gold); font-style: normal; }
+  .hero-text p { color: #8899AA; font-size: 15px; line-height: 1.6; max-width: 480px; }
+  .hero-stats { display: flex; gap: 2rem; margin-top: 1.5rem; }
+  .hero-stat-val { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 26px; }
+  .hero-stat-label { color: #6B7A8E; font-size: 12px; margin-top: 2px; }
+  .embed-btn {
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .embed-btn:hover { opacity: 0.88; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* TOOL CARDS */
+  .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+  .tool-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid #E8E4DA;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .tool-card:hover { border-color: var(--gold-light); }
+  .tool-card-header {
+    background: var(--navy);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .tool-icon {
+    width: 40px; height: 40px;
+    background: rgba(201,168,76,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .tool-card-title { color: var(--white); font-size: 15px; font-weight: 500; }
+  .tool-card-subtitle { color: #6B7A8E; font-size: 12px; margin-top: 2px; }
+  .tool-card-body { padding: 1.5rem; }
+
+  /* FORM ELEMENTS */
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.2px; }
+  input[type=text], input[type=email], input[type=tel], select, textarea {
+    width: 100%;
+    background: var(--cream);
+    border: 1px solid #DDD8CC;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 14px;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+  textarea { resize: vertical; min-height: 90px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-primary {
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+    letter-spacing: 0.2px;
+  }
+  .btn-primary:hover { background: var(--navy-light); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-gold {
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+  .btn-gold:hover { opacity: 0.88; }
+
+  /* RESULT BOX */
+  .result-box {
+    background: var(--cream);
+    border: 1px solid #DDD8CC;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    margin-top: 14px;
+    display: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .result-box.visible { display: block; }
+  .result-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    color: var(--gold-dark);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* CHAT BOT */
+  .chat-window {
+    background: var(--white);
+    border: 1px solid #E8E4DA;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .chat-header {
+    background: var(--navy);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chat-avatar {
+    width: 36px; height: 36px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .chat-header-info { flex: 1; }
+  .chat-header-name { color: var(--white); font-size: 14px; font-weight: 500; }
+  .chat-header-status { color: #5DCAA5; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+  .status-dot { width: 6px; height: 6px; background: #5DCAA5; border-radius: 50%; }
+  .chat-messages { height: 340px; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 12px; background: var(--cream); }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; }
+  .msg.bot { background: var(--white); border: 1px solid #E8E4DA; color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.user { background: var(--navy); color: var(--white); align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.typing { color: var(--text-muted); font-style: italic; }
+  .chat-input-row { display: flex; gap: 8px; padding: 1rem 1.25rem; border-top: 1px solid #E8E4DA; background: var(--white); }
+  .chat-input-row input { margin: 0; flex: 1; }
+  .chat-send {
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 8px;
+    padding: 0 18px;
+    font-size: 18px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: opacity 0.2s;
+  }
+  .chat-send:hover { opacity: 0.85; }
+
+  /* BOOKING SLOTS */
+  .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .slot-btn {
+    background: var(--cream);
+    border: 1px solid #DDD8CC;
+    border-radius: 8px;
+    padding: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .slot-btn:hover { background: var(--navy); color: var(--white); border-color: var(--navy); }
+  .slot-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold-dark); }
+  .slot-btn.taken { opacity: 0.35; cursor: not-allowed; }
+
+  .embed-section h3 { color: var(--white); font-size: 18px; font-weight: 500; margin-bottom: 6px; font-family: 'Playfair Display', serif; }
+  .embed-section p { color: #8899AA; font-size: 13px; margin-bottom: 1.5rem; }
+  .embed-tabs { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .embed-tab {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #8899AA;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .embed-tab.active, .embed-tab:hover { background: rgba(201,168,76,0.15); color: var(--gold); border-color: rgba(201,168,76,0.3); }
+  .code-block {
+    background: #080F18;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 1.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #A8D8A8;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .code-attr { color: #FAC775; }
+  .code-val { color: #9FE1CB; }
+  .code-tag { color: #85B7EB; }
+  .copy-code-btn {
+    background: none;
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.15s;
+  }
+  .copy-code-btn:hover { background: rgba(201,168,76,0.1); }
+
+  /* LOADING SPINNER */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: var(--white); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SUCCESS */
+  .success-banner {
+    background: var(--success-bg);
+    border: 1px solid #A8D8C0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--success);
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+    margin-top: 14px;
+  }
+  .success-banner.visible { display: block; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 1rem;
+  }
+
+  .chip {
+    display: inline-block;
+    background: var(--cream-dark);
+    border: 1px solid #DDD8CC;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .form-row { grid-template-columns: 1fr; }
+    .hero { flex-direction: column; }
+    .hero-stats { flex-wrap: wrap; gap: 1rem; }
+    .slots-grid { grid-template-columns: repeat(2, 1fr); }
+    .tool-grid { grid-template-columns: 1fr; }
+    nav { padding: 0 1rem; }
+    .nav-tabs { gap: 2px; }
+    .nav-tab { padding: 6px 10px; font-size: 12px; }
+  }
+</style>
+</head>
 <body>
 
-<h1>Dashboard</h1>
-<p>You are logged in</p>
+<nav>
+  <div class="logo">Prop<span>AI</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPanel('tools')">Tools</button>
+    <button class="nav-tab" onclick="showPanel('followup')">Lead Follow-Up</button>
+    <button class="nav-tab" onclick="showPanel('listing')">Listings</button>
+  </div>
+</nav>
 
-<button onclick="logout()">Logout</button>
+<main>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-text">
+      <h1>AI automation built for<br><em>real estate professionals</em></h1>
+      <p>Two powerful AI tools that work around the clock — follow up on leads instantly, generate MLS listings in seconds, save 20+ hours a week.</p>
+      <div class="hero-stats">
+        <div>
+          <div class="hero-stat-val">24/7</div>
+          <div class="hero-stat-label">Lead response</div>
+        </div>
+        <div>
+          <div class="hero-stat-val">&lt;30s</div>
+          <div class="hero-stat-label">Listing generated</div>
+        </div>
+      </div>
+    </div>
+    
+  <!-- TOOLS OVERVIEW PANEL -->
+  <div id="panel-tools" class="panel active">
+    <div class="section-label">Your AI tools</div>
+    <div class="tool-grid">
+      <div class="tool-card" onclick="showPanel('followup')" style="cursor:pointer">
+        <div class="tool-card-header">
+          <div class="tool-icon">📬</div>
+          <div>
+            <div class="tool-card-title">AI Lead Follow-Up</div>
+            <!-- DASHBOARD -->
+<div style="background:var(--white);border:1px solid #E8E4DA;border-radius:14px;padding:20px;margin-bottom:1.5rem;">
+  
+  <div style="font-weight:600;font-size:16px;margin-bottom:4px;">
+    Lead follow-up dashboard
+  </div>
+  
+  <div id="dashboard-date" style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+    —
+  </div>
 
-const supabase = createClient(
-  "https://jrmqdojsxjtkjpczaysp.supabase.co",
-  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
-);
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+    
+    <div>
+      <div style="font-size:22px;font-weight:600;" id="stat-total">0</div>
+      <div style="font-size:12px;color:var(--text-muted);">Total leads</div>
+    </div>
 
-// 🔐 PROTECT PAGE
-async function checkAuth() {
-  const { data } = await supabase.auth.getSession();
+    <div>
+      <div style="font-size:22px;font-weight:600;" id="stat-hot">0</div>
+      <div style="font-size:12px;color:var(--text-muted);">Hot leads</div>
+    </div>
 
-  if (!data.session) {
-    window.location.href = "/login.html";
-  } else {
-    localStorage.setItem("token", data.session.access_token);
-  }
-}
+    <div>
+      <div style="font-size:22px;font-weight:600;" id="stat-followup">0</div>
+      <div style="font-size:12px;color:var(--text-muted);">Need follow-up</div>
+    </div>
 
-checkAuth();
+    <div>
+      <div style="font-size:22px;font-weight:600;" id="stat-week">0</div>
+      <div style="font-size:12px;color:var(--text-muted);">This week</div>
+    </div>
 
-// 🔓 LOGOUT
-window.logout = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "/login.html";
-};
-</script>
+  </div>
+</div>
+
+<!-- LEADS LIST -->
+<div style="background:var(--white);border:1px solid #E8E4DA;border-radius:14px;padding:20px;margin-bottom:1.5rem;">
+  
+  <div style="font-weight:600;font-size:15px;margin-bottom:12px;">
+    Saved leads
+  </div>
+
+  <div id="leads-list" style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text-muted);">
+    No leads yet
+  </div>
+
+</div>
+            <div class="tool-card-subtitle">Instant personalized outreach</div>
+          </div>
+        </div>
+        <div class="tool-card-body">
+          <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;">Enter a new lead's details and instantly get a personalized follow-up email and SMS — written to convert. Never let a lead go cold again.</p>
+          <div class="chip">Email + SMS</div>
+          <div class="chip" style="margin-left:6px">Instant</div>
+          <button class="btn-gold" onclick="event.stopPropagation();showPanel('followup')">Open tool →</button>
+        </div>
+      </div>
+      <div class="tool-card" onclick="showPanel('listing')" style="cursor:pointer">
+        <div class="tool-card-header">
+          <div class="tool-icon">🏡</div>
+          <div>
+            <div class="tool-card-title">Listing Description Generator</div>
+            <div class="tool-card-subtitle">MLS-ready copy in seconds</div>
+          </div>
+        </div>
+        <div class="tool-card-body">
+          <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;">Enter property details and get a professional, compelling MLS listing description. Tone options for luxury, family, investor, and more.</p>
+          <div class="chip">MLS-ready</div>
+          <div class="chip" style="margin-left:6px">Multiple tones</div>
+          <button class="btn-gold" onclick="event.stopPropagation();showPanel('listing')">Open tool →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAD FOLLOW-UP PANEL -->
+  <div id="panel-followup" class="panel">
+    <div class="section-label">AI Lead Follow-Up System</div>
+    <div class="tool-grid" style="grid-template-columns: 1.3fr 1fr; align-items:start;">
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-icon">📬</div>
+          <div>
+            <div class="tool-card-title">New lead details</div>
+            <div class="tool-card-subtitle">Fill in what you know</div>
+          </div>
+        </div>
+        <div class="tool-card-body">
+          <div class="form-row">
+            <div>
+              <label>First name</label>
+              <input type="text" id="lead-name" placeholder="e.g. Sarah">
+            </div>
+            <div>
+              <label>Phone / email</label>
+              <input type="text" id="lead-contact" placeholder="e.g. sarah@gmail.com">
+            </div>
+          </div>
+          <label>Where did this lead come from?</label>
+          <select id="lead-source">
+            <option value="Zillow">Zillow inquiry</option>
+            <option value="Realtor.com">Realtor.com inquiry</option>
+            <option value="Open house">Open house sign-in</option>
+            <option value="Facebook ad">Facebook ad</option>
+            <option value="Website contact form">Website contact form</option>
+            <option value="Referral">Referral</option>
+            <option value="Cold call">Cold call / walk-in</option>
+          </select>
+          <label>What are they looking for?</label>
+          <select id="lead-type">
+            <option value="buying a home">Buying a home</option>
+            <option value="selling their home">Selling their home</option>
+            <option value="renting a property">Renting a property</option>
+            <option value="investing in real estate">Investing in real estate</option>
+          </select>
+          <label>Any notes? (optional)</label>
+          <textarea id="lead-notes" placeholder="e.g. looking for 3BR under $450k, pre-approved, wants to move in 60 days..."></textarea>
+          <button class="btn-primary" id="followup-btn" onclick="generateFollowUp()">Generate follow-up messages</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="tool-card" style="flex:1">
+          <div class="tool-card-header">
+            <div class="tool-icon">✉️</div>
+            <div>
+              <div class="tool-card-title">Follow-up email</div>
+              <div class="tool-card-subtitle">Ready to send</div>
+            </div>
+          </div>
+          <div class="tool-card-body">
+            <div id="email-result" class="result-box">
+              <div class="result-label">Generated email</div>
+              <div id="email-content"></div>
+            </div>
+            <p id="email-placeholder" style="font-size:13px;color:var(--text-muted);line-height:1.6;">Fill in the lead details and click generate to get a personalized follow-up email.</p>
+          </div>
+        </div>
+        <div class="tool-card" style="flex:1">
+          <div class="tool-card-header">
+            <div class="tool-icon">💬</div>
+            <div>
+              <div class="tool-card-title">Follow-up SMS</div>
+              <div class="tool-card-subtitle">160 chars, high open rate</div>
+            </div>
+          </div>
+          <div class="tool-card-body">
+            <div id="sms-result" class="result-box">
+              <div class="result-label">Generated SMS</div>
+              <div id="sms-content"></div>
+            </div>
+            <p id="sms-placeholder" style="font-size:13px;color:var(--text-muted);line-height:1.6;">Your personalized SMS follow-up will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTING GENERATOR PANEL -->
+  <div id="panel-listing" class="panel">
+    <div class="section-label">AI Listing Description Generator</div>
+    <div class="tool-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-icon">🏡</div>
+          <div>
+            <div class="tool-card-title">Property details</div>
+            <div class="tool-card-subtitle">Tell us about the property</div>
+          </div>
+        </div>
+        <div class="tool-card-body">
+          <label>Property address</label>
+          <input type="text" id="prop-address" placeholder="e.g. 142 Magnolia Drive, Orlando, FL">
+          <div class="form-row">
+            <div>
+              <label>Beds / Baths</label>
+              <input type="text" id="prop-beds" placeholder="e.g. 4 bed / 3 bath">
+            </div>
+            <div>
+              <label>Square footage</label>
+              <input type="text" id="prop-sqft" placeholder="e.g. 2,450 sq ft">
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>List price</label>
+              <input type="text" id="prop-price" placeholder="e.g. $549,000">
+            </div>
+            <div>
+              <label>Year built</label>
+              <input type="text" id="prop-year" placeholder="e.g. 2018">
+            </div>
+          </div>
+          <label>Key features (separate by comma)</label>
+          <textarea id="prop-features" placeholder="e.g. pool, gourmet kitchen, 3-car garage, master suite, open floor plan, cul-de-sac, new roof..."></textarea>
+          <label>Listing tone</label>
+          <select id="prop-tone">
+            <option value="luxury and aspirational">Luxury / aspirational</option>
+            <option value="warm and family-friendly">Warm / family-friendly</option>
+            <option value="investment opportunity focused">Investment / ROI focused</option>
+            <option value="modern and minimalist">Modern / minimalist</option>
+            <option value="charming and character-filled">Charming / character-filled</option>
+          </select>
+          <button class="btn-primary" id="listing-btn" onclick="generateListing()">Generate MLS listing</button>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-icon">📝</div>
+          <div>
+            <div class="tool-card-title">Generated listing</div>
+            <div class="tool-card-subtitle">MLS-ready copy</div>
+          </div>
+        </div>
+        <div class="tool-card-body">
+          <div id="listing-result" class="result-box">
+            <div class="result-label">MLS description</div>
+            <div id="listing-content"></div>
+          </div>
+          <p id="listing-placeholder" style="font-size:13px;color:var(--text-muted);line-height:1.6;">Enter your property details and click generate. Your professional MLS listing description will appear here — ready to copy and paste.</p>
+          <button class="btn-gold" id="copy-listing-btn" style="display:none;margin-top:14px" onclick="copyListing()">Copy to clipboard</button>
+          <div class="success-banner" id="copy-success">Copied to clipboard!</div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+</main>
+
+
+<script src="script.js"></script>
 
 </body>
 </html>
