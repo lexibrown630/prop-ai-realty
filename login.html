@@ -1,13 +1,19 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>PropAI Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
+:root {
+  --gold: #C9A84C;
+  --navy: #0D1B2A;
+  --cream: #FAF8F3;
+}
+
 body {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
@@ -24,26 +30,36 @@ body {
   border-radius: 14px;
   width: 320px;
   text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  margin-bottom: 20px;
 }
 
 input {
   width: 100%;
   padding: 12px;
-  margin-top: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
 }
 
 button {
-  margin-top: 16px;
+  margin-top: 20px;
   width: 100%;
   padding: 12px;
-  background: #C9A84C;
+  background: var(--gold);
   border: none;
+  border-radius: 8px;
+  font-weight: bold;
   cursor: pointer;
 }
 
 #status {
-  margin-top: 10px;
-  font-size: 13px;
+  margin-top: 15px;
+  font-size: 14px;
 }
 </style>
 </head>
@@ -51,10 +67,11 @@ button {
 <body>
 
 <div class="card">
-  <h2>PropAI Login</h2>
+  <h1>PropAI</h1>
+  <p>Sign in to your account</p>
 
-  <input id="email" placeholder="Enter email" />
-  <button id="login-btn">Send Magic Link</button>
+  <input type="email" id="email" placeholder="Enter your email" />
+  <button onclick="login()">Send Magic Link</button>
 
   <div id="status"></div>
 </div>
@@ -67,38 +84,22 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-// 🔥 LOGIN BUTTON
-document.getElementById("login-btn").onclick = async () => {
+window.login = async () => {
   const email = document.getElementById("email").value;
-  const status = document.getElementById("status");
-
-  if (!email) {
-    status.innerText = "Enter email";
-    return;
-  }
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: window.location.origin + "/index.html"
+      emailRedirectTo: "https://prop-ai-realty.netlify.app/payments.html"
     }
   });
 
-  status.innerText = error ? error.message : "Check your email";
+  document.getElementById("status").innerText =
+    error ? "❌ " + error.message : "✅ Check your email";
 };
-
-// 🔥 HANDLE MAGIC LINK RETURN
-async function handleSession() {
-  const { data } = await supabase.auth.getSession();
-
-  if (data.session) {
-    localStorage.setItem("token", data.session.access_token);
-    window.location.href = "/index.html";
-  }
-}
-
-handleSession();
 </script>
 
 </body>
 </html>
+
+
