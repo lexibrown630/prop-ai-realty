@@ -11,7 +11,10 @@
 :root {
   --gold: #C9A84C;
   --navy: #0D1B2A;
-  --cream: #FAF8F3;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -24,30 +27,51 @@ body {
   align-items: center;
 }
 
+/* FIX: ensures nothing blocks input */
+.container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .card {
   background: white;
   padding: 40px;
   border-radius: 14px;
-  width: 320px;
+  width: 340px;
   text-align: center;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  z-index: 10;
 }
 
 h1 {
   font-family: 'Playfair Display', serif;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 14px;
+  color: #666;
 }
 
 input {
   width: 100%;
   padding: 12px;
-  margin-top: 10px;
+  margin-top: 14px;
   border-radius: 8px;
   border: 1px solid #ddd;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+}
+
+input:focus {
+  border-color: var(--gold);
 }
 
 button {
-  margin-top: 20px;
+  margin-top: 18px;
   width: 100%;
   padding: 12px;
   background: var(--gold);
@@ -55,25 +79,38 @@ button {
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:hover {
+  opacity: 0.9;
 }
 
 #status {
   margin-top: 15px;
-  font-size: 14px;
+  font-size: 13px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="card">
-  <h1>PropAI</h1>
-  <p>Sign in to your account</p>
+<div class="container">
+  <div class="card">
+    <h1>PropAI</h1>
+    <p>Sign in to your account</p>
 
-  <input type="email" id="email" placeholder="Enter your email" />
-  <button onclick="login()">Send Magic Link</button>
+    <input type="email" id="email" placeholder="Enter your email" />
 
-  <div id="status"></div>
+    <button id="login-btn">Send Magic Link</button>
+
+    <div id="status"></div>
+  </div>
 </div>
 
 <script type="module">
@@ -84,19 +121,36 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-window.login = async () => {
+const btn = document.getElementById("login-btn");
+
+btn.addEventListener("click", async () => {
   const email = document.getElementById("email").value;
+  const status = document.getElementById("status");
+
+  if (!email) {
+    status.innerText = "Enter your email";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "Sending...";
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: "https://prop-ai-realty.netlify.app/payments.html"
+      emailRedirectTo: "https://prop-ai-realty.netlify.app"
     }
   });
 
-  document.getElementById("status").innerText =
-    error ? "❌ " + error.message : "✅ Check your email";
-};
+  if (error) {
+    status.innerText = "❌ " + error.message;
+    btn.disabled = false;
+    btn.innerText = "Send Magic Link";
+  } else {
+    status.innerText = "✅ Check your email";
+    btn.innerText = "Email Sent";
+  }
+});
 </script>
 
 </body>
