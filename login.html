@@ -5,18 +5,9 @@
 <title>PropAI Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --gold: #C9A84C;
-  --navy: #0D1B2A;
-}
-
-* {
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
@@ -27,71 +18,31 @@ body {
   align-items: center;
 }
 
-.container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .card {
   background: white;
   padding: 40px;
   border-radius: 14px;
-  width: 340px;
+  width: 320px;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-  z-index: 10;
-}
-
-h1 {
-  font-family: 'Playfair Display', serif;
-  margin-bottom: 10px;
-}
-
-p {
-  font-size: 14px;
-  color: #666;
 }
 
 input {
   width: 100%;
   padding: 12px;
-  margin-top: 14px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  font-size: 14px;
-  outline: none;
-  transition: border 0.2s;
-}
-
-input:focus {
-  border-color: var(--gold);
+  margin-top: 12px;
 }
 
 button {
-  margin-top: 18px;
+  margin-top: 16px;
   width: 100%;
   padding: 12px;
-  background: var(--gold);
+  background: #C9A84C;
   border: none;
-  border-radius: 8px;
-  font-weight: bold;
   cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-button:hover {
-  opacity: 0.9;
 }
 
 #status {
-  margin-top: 15px;
+  margin-top: 10px;
   font-size: 13px;
 }
 </style>
@@ -99,17 +50,13 @@ button:hover {
 
 <body>
 
-<div class="container">
-  <div class="card">
-    <h1>PropAI</h1>
-    <p>Sign in to your account</p>
+<div class="card">
+  <h2>PropAI Login</h2>
 
-    <input type="email" id="email" placeholder="Enter your email" />
+  <input id="email" placeholder="Enter email" />
+  <button id="login-btn">Send Magic Link</button>
 
-    <button id="login-btn">Send Magic Link</button>
-
-    <div id="status"></div>
-  </div>
+  <div id="status"></div>
 </div>
 
 <script type="module">
@@ -120,50 +67,32 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-const btn = document.getElementById("login-btn");
-
-/* =========================
-   LOGIN BUTTON
-========================= */
-btn.addEventListener("click", async () => {
+// 🔥 LOGIN BUTTON
+document.getElementById("login-btn").onclick = async () => {
   const email = document.getElementById("email").value;
   const status = document.getElementById("status");
 
   if (!email) {
-    status.innerText = "Enter your email";
+    status.innerText = "Enter email";
     return;
   }
-
-  btn.disabled = true;
-  btn.innerText = "Sending...";
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: "https://prop-ai-realty.netlify.app/index.html"
+      emailRedirectTo: window.location.origin + "/index.html"
     }
   });
 
-  if (error) {
-    status.innerText = "❌ " + error.message;
-    btn.disabled = false;
-    btn.innerText = "Send Magic Link";
-  } else {
-    status.innerText = "✅ Check your email";
-    btn.innerText = "Email Sent";
-  }
-});
+  status.innerText = error ? error.message : "Check your email";
+};
 
-/* =========================
-   🔥 HANDLE LOGIN AFTER REDIRECT
-========================= */
+// 🔥 HANDLE MAGIC LINK RETURN
 async function handleSession() {
   const { data } = await supabase.auth.getSession();
 
   if (data.session) {
     localStorage.setItem("token", data.session.access_token);
-
-    // redirect to dashboard
     window.location.href = "/index.html";
   }
 }
