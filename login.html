@@ -27,7 +27,6 @@ body {
   align-items: center;
 }
 
-/* FIX: ensures nothing blocks input */
 .container {
   width: 100%;
   display: flex;
@@ -123,6 +122,9 @@ const supabase = createClient(
 
 const btn = document.getElementById("login-btn");
 
+/* =========================
+   LOGIN BUTTON
+========================= */
 btn.addEventListener("click", async () => {
   const email = document.getElementById("email").value;
   const status = document.getElementById("status");
@@ -151,6 +153,22 @@ btn.addEventListener("click", async () => {
     btn.innerText = "Email Sent";
   }
 });
+
+/* =========================
+   🔥 HANDLE LOGIN AFTER REDIRECT
+========================= */
+async function handleSession() {
+  const { data } = await supabase.auth.getSession();
+
+  if (data.session) {
+    localStorage.setItem("token", data.session.access_token);
+
+    // redirect to dashboard
+    window.location.href = "/index.html";
+  }
+}
+
+handleSession();
 </script>
 
 </body>
