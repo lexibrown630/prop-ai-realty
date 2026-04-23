@@ -1,95 +1,135 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
 exports.handler = async (event) => {
-try {
-if (event.httpMethod !== "POST") {
-return {
-statusCode: 405,
-body: JSON.stringify({ error: "Method not allowed" }),
-};
-}
+  try {
+    if (event.httpMethod !== "POST") {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ error: "Method not allowed" }),
+      };
+    }
 
-```
-const { priceId, email } = JSON.parse(event.body || "{}");
+    /* =========================
+       🔐 AUTH (FROM HEADER)
+    ========================= */
+    const token = event.headers.authorization?.replace("Bearer ", "");
 
-if (!priceId || !email) {
-  return {
-    statusCode: 400,
-    body: JSON.stringify({ error: "Missing priceId or email" }),
-  };
-}
+    if (!token) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "Unauthorized" }),
+      };
+    }
 
-// 🔥 MAP PRICE → PLAN
-let plan = "Main";
+    // Get user from Supabase
+    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+    });
 
-if (priceId === "price_1TP9DMRqy7IFyseNPEDk3coa") plan = "Startup Fee";
-else if (priceId === "price_1TP9BERqy7IFyseNaZDNaYs2") plan = "Main";
-// 🔍 CHECK IF CUSTOMER EXISTS
-let customer;
+    const userData = await userRes.json();
 
-const existingCustomers = await stripe.customers.list({
-  email: email,
-  limit: 1,
-});
+    if (!userData || userData.error) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "Invalid user" }),
+      };
+    }
 
-if (existingCustomers.data.length > 0) {
-  customer = existingCustomers.data[0];
-  console.log("👤 Existing customer:", customer.id);
-} else {
-  customer = await stripe.customers.create({
-    email: email,
-  });
-  console.log("🆕 New customer created:", customer.id);
-}
+    const email = userData.email;
+    const userId = userData.id;
 
-// ✅ CREATE CHECKOUT SESSION
-const session = await stripe.checkout.sessions.create({
-  mode: "subscription",
+    /* =========================
+       📦 INPUT
+    ========================= */
+    const { priceId } = JSON.parse(event.body || "{}");
 
-  customer: customer.id, // 🔥 KEY FIX
+    if (!priceId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing priceId" }),
+      };
+    }
 
-  payment_method_types: ["card"],
+    /* =========================
+       🧠 PLAN MAPPING
+    ========================= */
+    let plan = "main";
 
-  line_items: [
-    {
-      price: priceId,
-      quantity: 1,
-    },
-  ],
+    if (priceId === "price_1TP9DMRqy7IFyseNPEDk3coa") plan = "startup";
+    if (priceId === "price_1TP9BERqy7IFyseNaZDNaYs2") plan = "main";
 
-  metadata: {
-    plan: plan,
-    customer_id: customer.id,
-  },
+    /* =========================
+       👤 GET OR CREATE CUSTOMER
+    ========================= */
+    let customer;
 
-  success_url: "https://prop-ai-realty.netlify.app/index.html?success=true",
-  cancel_url: "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
-});
+    const existingCustomers = await stripe.customers.list({
+      email: email,
+      limit: 1,
+    });
 
-if (!session.url) {
-  return {
-    statusCode: 500,
-    body: JSON.stringify({ error: "No checkout URL returned" }),
-  };
-}
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+      console.log("👤 Existing customer:", customer.id);
+    } else {
+      customer = await stripe.customers.create({
+        email: email,
+        metadata: {
+          supabase_user_id: userId,
+        },
+      });
+      console.log("🆕 Created customer:", customer.id);
+    }
 
-return {
-  statusCode: 200,
-  body: JSON.stringify({ url: session.url }),
-};
-```
+    /* =========================
+       💳 CREATE CHECKOUT
+    ========================= */
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
 
-} catch (err) {
-console.error("❌ STRIPE ERROR:", err);
+      customer: customer.id,
 
-```
-return {
-  statusCode: 500,
-  body: JSON.stringify({
-    error: err.message || "Internal server error",
-  }),
-};
-```
+      payment_method_types: ["card"],
 
-}
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+
+      // 🔥 CRITICAL FOR WEBHOOK LINKING
+      client_reference_id: userId,
+
+      metadata: {
+        plan: plan,
+        user_id: userId,
+      },
+
+      success_url:
+        "https://prop-ai-realty.netlify.app/index.html?success=true",
+      cancel_url:
+        "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
+    });
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ url: session.url }),
+    };
+  } catch (err) {
+    console.error("❌ STRIPE ERROR:", err);
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: err.message || "Internal server error",
+      }),
+    };
+  }
 };
