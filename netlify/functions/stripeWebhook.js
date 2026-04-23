@@ -1,131 +1,128 @@
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-apiVersion: "2023-10-16",
+  apiVersion: "2023-10-16",
 });
 
-/* 🔥 MAP STRIPE PRICE → PLAN */
+/* 🔥 PLAN MAPPING */
 function getPlanFromPrice(priceId) {
-if (priceId === "price_1TN45MRqy7IFyseNJtzPtgVC") return "starter";
-if (priceId === "price_1TN46TRqy7IFyseNHEiBa8xe") return "pro";
-if (priceId === "price_1TN47TRqy7IFyseNqnUSkEoO") return "agency";
-return "starter";
+  if (priceId === "price_1TN45MRqy7IFyseNJtzPtgVC") return "starter";
+  if (priceId === "price_1TN46TRqy7IFyseNHEiBa8xe") return "pro";
+  if (priceId === "price_1TN47TRqy7IFyseNqnUSkEoO") return "agency";
+  return "starter";
 }
 
-export async function handler(event) {
-const sig = event.headers["stripe-signature"];
+const SUPABASE_URL = "https://jrmqdojsxjtkjpczaysp.supabase.co";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-let stripeEvent;
+/* 🔥 UPSERT USER (CREATE OR UPDATE) */
+async function upsertUser(data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+    method: "POST",
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates", // 🔥 THIS IS KEY
+    },
+    body: JSON.stringify(data),
+  });
 
-try {
-stripeEvent = stripe.webhooks.constructEvent(
-event.body,
-sig,
-process.env.STRIPE_WEBHOOK_SECRET
-);
-} catch (err) {
-console.error("❌ Signature verification failed:", err.message);
-return {
-statusCode: 400,
-body: `Webhook Error: ${err.message}`,
-};
+  const text = await res.text();
+
+  if (!res.ok) {
+    console.error("❌ Supabase error:", text);
+  } else {
+    console.log("✅ Supabase updated:", data.email || data.stripe_customer_id);
+  }
 }
 
 /* ==============================
-✅ CHECKOUT SUCCESS
+MAIN HANDLER
 ============================== */
-if (stripeEvent.type === "checkout.session.completed") {
-const session = stripeEvent.data.object;
+export async function handler(event) {
+  const sig = event.headers["stripe-signature"];
 
-```
-const email =
-  session.customer_email ||
-  session.customer_details?.email ||
-  "";
+  let stripeEvent;
 
-const customerId = session.customer;
-const plan = session.metadata?.plan || "starter";
+  try {
+    stripeEvent = stripe.webhooks.constructEvent(
+      event.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("❌ Signature failed:", err.message);
+    return { statusCode: 400, body: err.message };
+  }
 
-const cleanEmail = email.trim().toLowerCase();
+  /* ==============================
+  💰 CHECKOUT SUCCESS
+  ============================== */
+  if (stripeEvent.type === "checkout.session.completed") {
+    const session = stripeEvent.data.object;
 
-console.log("💰 PAYMENT SUCCESS:", cleanEmail, plan);
+    const email =
+      session.customer_email ||
+      session.customer_details?.email ||
+      "";
 
-await fetch(
-  `https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users?email=eq.${cleanEmail}`,
-  {
-    method: "PATCH",
-    headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify({
+    const customerId = session.customer;
+    const plan = session.metadata?.plan || "starter";
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    console.log("💰 PAYMENT:", cleanEmail, plan);
+
+    await upsertUser({
+      email: cleanEmail,
+      stripe_customer_id: customerId,
       subscription_status: "active",
       plan: plan,
-      stripe_customer_id: customerId,
-    }),
+    });
   }
-);
-```
 
-}
+  /* ==============================
+  🔄 SUBSCRIPTION UPDATE
+  ============================== */
+  if (
+    stripeEvent.type === "customer.subscription.updated" ||
+    stripeEvent.type === "customer.subscription.deleted"
+  ) {
+    const sub = stripeEvent.data.object;
 
-/* ==============================
-🔄 SUBSCRIPTION UPDATED / CANCELED
-============================== */
-if (
-stripeEvent.type === "customer.subscription.updated" ||
-stripeEvent.type === "customer.subscription.deleted"
-) {
-const subscription = stripeEvent.data.object;
+    const customerId = sub.customer;
+    const status = sub.status;
+    const cancelAtPeriodEnd = sub.cancel_at_period_end;
 
-```
-const customerId = subscription.customer;
-const status = subscription.status;
-const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    const priceId = sub.items.data[0]?.price?.id;
+    const plan = getPlanFromPrice(priceId);
 
-// 🔥 GET PLAN FROM STRIPE PRICE
-const priceId = subscription.items.data[0]?.price?.id;
-const plan = getPlanFromPrice(priceId);
+    let newStatus = "inactive";
 
-let newStatus = "inactive";
+    if (status === "active" && !cancelAtPeriodEnd) {
+      newStatus = "active";
+    }
 
-if (status === "active" && !cancelAtPeriodEnd) {
-  newStatus = "active";
-}
+    if (cancelAtPeriodEnd) {
+      newStatus = "canceling";
+    }
 
-if (cancelAtPeriodEnd) {
-  newStatus = "canceling";
-}
+    if (status === "canceled" || status === "unpaid") {
+      newStatus = "inactive";
+    }
 
-if (status === "canceled" || status === "unpaid") {
-  newStatus = "inactive";
-}
+    console.log("🔄 SUB UPDATE:", customerId, plan, newStatus);
 
-console.log("🔄 UPDATE:", customerId, plan, newStatus);
-
-await fetch(
-  `https://jrmqdojsxjtkjpczaysp.supabase.co/rest/v1/users?stripe_customer_id=eq.${customerId}`,
-  {
-    method: "PATCH",
-    headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+    await upsertUser({
+      stripe_customer_id: customerId,
       subscription_status: newStatus,
       plan: newStatus === "inactive" ? "starter" : plan,
-    }),
+    });
   }
-);
-```
 
-}
-
-return {
-statusCode: 200,
-body: "OK",
-};
+  return {
+    statusCode: 200,
+    body: "OK",
+  };
 }
