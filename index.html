@@ -2,89 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PropAI Login</title>
+<title>PropAI Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-<style>
-:root {
-  --gold: #C9A84C;
-  --navy: #0D1B2A;
-}
-
-body {
-  margin: 0;
-  font-family: 'DM Sans', sans-serif;
-  background: linear-gradient(135deg, #0D1B2A, #1B263B);
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.card {
-  background: white;
-  padding: 42px;
-  border-radius: 16px;
-  width: 340px;
-  text-align: center;
-  box-shadow: 0 25px 70px rgba(0,0,0,0.25);
-}
-
-h1 {
-  font-family: 'Playfair Display', serif;
-  margin-bottom: 8px;
-}
-
-p {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 20px;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-button {
-  margin-top: 18px;
-  width: 100%;
-  padding: 12px;
-  background: var(--gold);
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-#status {
-  margin-top: 15px;
-  font-size: 13px;
-}
-</style>
 </head>
 
 <body>
 
-<div class="card">
-  <h1>PropAI</h1>
-  <p>Sign in to your account</p>
+<h1>Dashboard</h1>
+<p>You are logged in</p>
 
-  <input type="email" id="email" placeholder="Enter your email" />
-  <button onclick="login()">Send Magic Link</button>
-
-  <div id="status"></div>
-</div>
+<button onclick="logout()">Logout</button>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
@@ -94,44 +21,24 @@ const supabase = createClient(
   "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
 );
 
-/* =========================
-   LOGIN (SEND MAGIC LINK)
-========================= */
-window.login = async () => {
-  const email = document.getElementById("email").value;
-
-  if (!email) {
-    document.getElementById("status").innerText = "Enter your email";
-    return;
-  }
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin // 🔥 important
-    }
-  });
-
-  document.getElementById("status").innerText =
-    error ? "❌ " + error.message : "✅ Check your email";
-};
-
-/* =========================
-   HANDLE LOGIN AFTER REDIRECT
-========================= */
-async function handleSession() {
+// 🔐 PROTECT PAGE
+async function checkAuth() {
   const { data } = await supabase.auth.getSession();
 
-  if (data.session) {
-    // 🔥 store token for your Netlify function
+  if (!data.session) {
+    window.location.href = "/login.html";
+  } else {
     localStorage.setItem("token", data.session.access_token);
-
-    // redirect to dashboard
-    window.location.href = "/index.html";
   }
 }
 
-handleSession();
+checkAuth();
+
+// 🔓 LOGOUT
+window.logout = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "/login.html";
+};
 </script>
 
 </body>
