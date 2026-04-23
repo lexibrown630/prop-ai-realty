@@ -1,194 +1,121 @@
 const OpenAI = require("openai");
 
 const client = new OpenAI({
-apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-/* 🔥 PLAN LIMITS */
-function getLimit(plan) {
-if (plan === "starter") return 10;
-if (plan === "pro") return 100;
-if (plan === "agency") return 999999;
-return 10;
-}
 
 exports.handler = async (event) => {
-try {
-if (!process.env.OPENAI_API_KEY) {
-return {
-statusCode: 500,
-body: JSON.stringify({ error: "Missing OpenAI key" }),
-};
-}
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Missing OpenAI key" }),
+      };
+    }
 
-```
-if (event.httpMethod !== "POST") {
-  return {
-    statusCode: 405,
-    body: JSON.stringify({ error: "Method Not Allowed" }),
-  };
-}
+    if (event.httpMethod !== "POST") {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ error: "Method Not Allowed" }),
+      };
+    }
 
-/* =========================
-   🔐 AUTH CHECK
-========================= */
-const token = event.headers.authorization?.replace("Bearer ", "");
+    /* =========================
+       📥 GET REQUEST DATA
+    ========================= */
+    let body;
 
-if (!token) {
-  return {
-    statusCode: 401,
-    body: JSON.stringify({ error: "Unauthorized" }),
-  };
-}
+    try {
+      body = JSON.parse(event.body || "{}");
+    } catch (e) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Invalid JSON body" }),
+      };
+    }
 
-// 🔥 VERIFY USER WITH SUPABASE
-const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-    apikey: process.env.SUPABASE_ANON_KEY,
-  },
-});
+    const { message, type } = body;
 
-const userData = await userRes.json();
+    if (!message) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing message" }),
+      };
+    }
 
-if (!userData || userData.error) {
-  return {
-    statusCode: 401,
-    body: JSON.stringify({ error: "Invalid user" }),
-  };
-}
+    /* =========================
+       🤖 PROMPT LOGIC
+    ========================= */
+    let systemPrompt = "";
+    let userPrompt = message;
 
-const email = userData.email;
+    if (type === "listing") {
+      systemPrompt =
+        "You are a high-end real estate copywriter. Write compelling, emotional, MLS-ready property listings that sell.";
 
-/* =========================
-   📊 LOAD USER DATA
-========================= */
-const dbRes = await fetch(
-  `${SUPABASE_URL}/rest/v1/users?email=eq.${email}`,
-  {
-    headers: {
-      apikey: SERVICE_KEY,
-      Authorization: `Bearer ${SERVICE_KEY}`,
-    },
-  }
-);
+      userPrompt = `
+Create a professional MLS listing.
 
-const users = await dbRes.json();
-const user = users[0];
+${message}
 
-if (!user) {
-  return {
-    statusCode: 404,
-    body: JSON.stringify({ error: "User not found" }),
-  };
-}
+Make it:
+- Engaging
+- Persuasive
+- Easy to read
+- Well formatted
+`;
+    } 
+    
+    else if (type === "followup") {
+      systemPrompt =
+        "You are a top-performing real estate agent following up with leads to convert them into clients.";
 
-const plan = user.plan || "starter";
-const usage = user.usage_count || 0;
-const limit = getLimit(plan);
+      userPrompt = `
+Create follow-up messages for this lead:
 
-/* =========================
-   🚫 ENFORCE LIMIT
-========================= */
-if (usage >= limit) {
-  return {
-    statusCode: 403,
-    body: JSON.stringify({
-      error: "Usage limit reached",
-      plan,
-      usage,
-      limit,
-    }),
-  };
-}
+${message}
 
-/* =========================
-   🤖 HANDLE AI
-========================= */
-const { message, type } = JSON.parse(event.body || "{}");
+Return EXACTLY in this format:
 
-if (!message) {
-  return {
-    statusCode: 400,
-    body: JSON.stringify({ error: "Missing message" }),
-  };
-}
+EMAIL:
+<email here>
 
-let systemPrompt = "";
-let userPrompt = message;
+SMS:
+<short sms under 160 characters>
+`;
+    } 
+    
+    else {
+      systemPrompt =
+        "You are a helpful real estate assistant helping users book showings and answer property questions.";
+    }
 
-if (type === "listing") {
-  if (plan === "starter") {
+    /* =========================
+       🤖 OPENAI CALL
+    ========================= */
+    const response = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
+
+    const reply = response.choices[0].message.content;
+
     return {
-      statusCode: 403,
+      statusCode: 200,
+      body: JSON.stringify({ reply }),
+    };
+
+  } catch (error) {
+    console.error("❌ CHAT ERROR:", error);
+
+    return {
+      statusCode: 500,
       body: JSON.stringify({
-        error: "Upgrade required for listings",
+        error: error.message || "Server error",
       }),
     };
   }
-
-  systemPrompt =
-    "You are a real estate copywriter. Write compelling, high-end property listings.";
-
-  userPrompt = `Create a real estate listing:\n${message}`;
-} 
-else if (type === "followup") {
-  systemPrompt =
-    "You are a real estate agent following up with leads. Be friendly and persuasive.";
-
-  userPrompt = `Write a follow-up message:\n${message}`;
-} 
-else {
-  systemPrompt =
-    "You are a helpful real estate assistant focused on booking showings.";
-}
-
-const response = await client.chat.completions.create({
-  model: "gpt-4.1-mini",
-  messages: [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt },
-  ],
-});
-
-const reply = response.choices[0].message.content;
-
-/* =========================
-   📈 INCREMENT USAGE
-========================= */
-await fetch(
-  `${SUPABASE_URL}/rest/v1/users?id=eq.${user.id}`,
-  {
-    method: "PATCH",
-    headers: {
-      apikey: SERVICE_KEY,
-      Authorization: `Bearer ${SERVICE_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      usage_count: usage + 1,
-    }),
-  }
-);
-
-return {
-  statusCode: 200,
-  body: JSON.stringify({ reply }),
-};
-```
-
-} catch (error) {
-console.error("❌ CHAT ERROR:", error);
-
-```
-return {
-  statusCode: 500,
-  body: JSON.stringify({ error: error.message }),
-};
-```
-
-}
 };
