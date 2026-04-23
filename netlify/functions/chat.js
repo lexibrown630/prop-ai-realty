@@ -6,41 +6,33 @@ const client = new OpenAI({
 
 exports.handler = async (event) => {
   try {
+    /* =========================
+       🔐 BASIC CHECKS
+    ========================= */
     if (!process.env.OPENAI_API_KEY) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Missing OpenAI key" }),
-      };
+      return res(500, "Missing OpenAI API key");
     }
 
     if (event.httpMethod !== "POST") {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: "Method Not Allowed" }),
-      };
+      return res(405, "Method Not Allowed");
     }
 
     /* =========================
-       📥 GET REQUEST DATA
+       📥 SAFE BODY PARSE
     ========================= */
-    let body;
+    let body = {};
 
     try {
       body = JSON.parse(event.body || "{}");
-    } catch (e) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Invalid JSON body" }),
-      };
+    } catch (err) {
+      return res(400, "Invalid JSON body");
     }
 
-    const { message, type } = body;
+    const message = body.message?.trim();
+    const type = body.type || "chat";
 
     if (!message) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Missing message" }),
-      };
+      return res(400, "Missing message");
     }
 
     /* =========================
@@ -51,10 +43,10 @@ exports.handler = async (event) => {
 
     if (type === "listing") {
       systemPrompt =
-        "You are a high-end real estate copywriter. Write compelling, emotional, MLS-ready property listings that sell.";
+        "You are a high-end real estate copywriter. Write compelling, emotional, MLS-ready property listings.";
 
       userPrompt = `
-Create a professional MLS listing.
+Create a professional MLS listing:
 
 ${message}
 
@@ -63,12 +55,12 @@ Make it:
 - Persuasive
 - Easy to read
 - Well formatted
-`;
+      `;
     } 
     
     else if (type === "followup") {
       systemPrompt =
-        "You are a top-performing real estate agent following up with leads to convert them into clients.";
+        "You are a top-performing real estate agent following up with leads.";
 
       userPrompt = `
 Create follow-up messages for this lead:
@@ -82,40 +74,88 @@ EMAIL:
 
 SMS:
 <short sms under 160 characters>
-`;
+      `;
     } 
     
     else {
       systemPrompt =
-        "You are a helpful real estate assistant helping users book showings and answer property questions.";
+        "You are a helpful real estate assistant helping users book showings.";
     }
 
     /* =========================
-       🤖 OPENAI CALL
+       🤖 OPENAI CALL (SAFE)
     ========================= */
-    const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
+    let aiResponse;
 
-    const reply = response.choices[0].message.content;
+    try {
+      aiResponse = await client.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+    } catch (err) {
+      console.error("❌ OpenAI API Error:", err);
+      return res(500, "AI request failed");
+    }
 
+    const reply =
+      aiResponse?.choices?.[0]?.message?.content?.trim() ||
+      "No response generated";
+
+    /* =========================
+       🧠 FORCE CLEAN FORMAT (FOLLOWUP ONLY)
+    ========================= */
+    if (type === "followup") {
+      let email = "";
+      let sms = "";
+
+      if (reply.includes("SMS:")) {
+        email = reply.split("SMS:")[0].replace("EMAIL:", "").trim();
+        sms = reply.split("SMS:")[1].trim();
+      } else {
+        // fallback if AI messes up format
+        email = reply;
+        sms = "Follow-up message not clearly separated.";
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          reply,
+          email,
+          sms,
+        }),
+      };
+    }
+
+    /* =========================
+       ✅ NORMAL RESPONSE
+    ========================= */
     return {
       statusCode: 200,
       body: JSON.stringify({ reply }),
     };
 
   } catch (error) {
-    console.error("❌ CHAT ERROR:", error);
+    console.error("❌ CHAT CRASH:", error);
 
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: error.message || "Server error",
+        error: error.message || "Server crashed",
       }),
     };
   }
 };
+
+/* =========================
+   🔧 HELPER RESPONSE
+========================= */
+function res(code, msg) {
+  return {
+    statusCode: code,
+    body: JSON.stringify({ error: msg }),
+  };
+}
