@@ -21,7 +21,7 @@ function showPanel(name) {
 }
 
 /* =========================
-   CHAT (WORKS ALREADY)
+   CHAT
 ========================= */
 
 function appendMsg(text, cls) {
@@ -44,7 +44,6 @@ async function sendChat() {
   if (!msg) return;
 
   input.value = '';
-
   appendMsg(msg, 'user');
 
   const typingEl = appendMsg('Alex is typing...', 'bot typing');
@@ -73,7 +72,7 @@ async function sendChat() {
 }
 
 /* =========================
-   LISTING GENERATOR (FIXED)
+   LISTING GENERATOR
 ========================= */
 
 async function generateListing() {
@@ -141,7 +140,7 @@ Make it professional, emotional, and high-converting.
 }
 
 /* =========================
-   FOLLOW-UP GENERATOR (FIXED)
+   FOLLOW-UP GENERATOR + SAVE LEAD
 ========================= */
 
 async function generateFollowUp() {
@@ -195,11 +194,18 @@ Return:
       return;
     }
 
-    // Simple split (AI returns both)
     const parts = json.reply.split("SMS");
 
     emailBox.innerText = parts[0] || json.reply;
     smsBox.innerText = parts[1] || "SMS not separated clearly";
+
+    // ✅ SAVE LEAD TO DASHBOARD
+    saveLead({
+      name: data.name || "Unknown",
+      contact: data.contact || "N/A",
+      status: Math.random() > 0.5 ? "Hot" : "Follow-up",
+      date: new Date().toISOString()
+    });
 
   } catch (err) {
     emailBox.innerText = err.message;
@@ -210,7 +216,76 @@ Return:
 }
 
 /* =========================
-   COPY FUNCTIONS
+   LEAD DASHBOARD SYSTEM
+========================= */
+
+let leads = JSON.parse(localStorage.getItem('propai_leads') || '[]');
+
+function saveLead(lead) {
+  leads.push(lead);
+  localStorage.setItem('propai_leads', JSON.stringify(leads));
+  renderLeads();
+  updateStats();
+}
+
+function renderLeads() {
+  const container = document.getElementById('leads-list');
+  if (!container) return;
+
+  if (leads.length === 0) {
+    container.innerHTML = "No leads yet";
+    return;
+  }
+
+  container.innerHTML = '';
+
+  leads.slice().reverse().forEach(l => {
+    const el = document.createElement('div');
+    el.style.padding = '10px';
+    el.style.border = '1px solid #EEE';
+    el.style.borderRadius = '8px';
+
+    el.innerHTML = `
+      <strong>${l.name}</strong> — ${l.contact}<br>
+      <span style="font-size:12px;color:#888;">
+        ${l.status} • ${new Date(l.date).toLocaleDateString()}
+      </span>
+    `;
+
+    container.appendChild(el);
+  });
+}
+
+function updateStats() {
+  const now = new Date();
+  const weekAgo = new Date();
+  weekAgo.setDate(now.getDate() - 7);
+
+  const total = leads.length;
+  const hot = leads.filter(l => l.status === 'Hot').length;
+  const followup = leads.filter(l => l.status === 'Follow-up').length;
+  const week = leads.filter(l => new Date(l.date) > weekAgo).length;
+
+  document.getElementById('stat-total').innerText = total;
+  document.getElementById('stat-hot').innerText = hot;
+  document.getElementById('stat-followup').innerText = followup;
+  document.getElementById('stat-week').innerText = week;
+}
+
+function setDashboardDate() {
+  const el = document.getElementById('dashboard-date');
+  if (!el) return;
+
+  const today = new Date();
+  el.innerText = today.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+/* =========================
+   COPY
 ========================= */
 
 function copyListing() {
@@ -224,7 +299,7 @@ function copyListing() {
 }
 
 /* =========================
-   EMBED CODE
+   EMBED
 ========================= */
 
 function switchEmbedTab(btn, tab) {
@@ -238,6 +313,7 @@ function updateEmbedCode() {
   const agency = document.getElementById('agency-name')?.value || 'Your Agency';
   const color = document.getElementById('primary-color')?.value || '#C9A84C';
   const tools = document.getElementById('embed-tools')?.value || 'all';
+  const label = document.getElementById('bubble-label')?.value || 'Book a Showing'; // ✅ FIXED
   const pos = document.getElementById('bubble-pos')?.value || 'bottom-right';
 
   let code = '';
@@ -272,4 +348,7 @@ function copyEmbedCode() {
 /* INIT */
 document.addEventListener('DOMContentLoaded', () => {
   updateEmbedCode();
+  renderLeads();
+  updateStats();
+  setDashboardDate();
 });
