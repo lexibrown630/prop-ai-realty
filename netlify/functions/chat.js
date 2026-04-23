@@ -6,154 +6,63 @@ const client = new OpenAI({
 
 exports.handler = async (event) => {
   try {
-    /* =========================
-       🔐 BASIC CHECKS
-    ========================= */
-    if (!process.env.OPENAI_API_KEY) {
-      return res(500, "Missing OpenAI API key");
-    }
-
     if (event.httpMethod !== "POST") {
-      return res(405, "Method Not Allowed");
+      return response(405, "Method not allowed");
     }
 
-    /* =========================
-       📥 SAFE BODY PARSE
-    ========================= */
     let body = {};
-
     try {
       body = JSON.parse(event.body || "{}");
-    } catch (err) {
-      return res(400, "Invalid JSON body");
+    } catch {
+      return response(400, "Invalid JSON");
     }
 
     const message = body.message?.trim();
     const type = body.type || "chat";
 
     if (!message) {
-      return res(400, "Missing message");
+      return response(400, "Missing message");
     }
 
-    /* =========================
-       🤖 PROMPT LOGIC
-    ========================= */
-    let systemPrompt = "";
-    let userPrompt = message;
+    let systemPrompt = "You are a helpful real estate assistant.";
 
     if (type === "listing") {
-      systemPrompt =
-        "You are a high-end real estate copywriter. Write compelling, emotional, MLS-ready property listings.";
-
-      userPrompt = `
-Create a professional MLS listing:
-
-${message}
-
-Make it:
-- Engaging
-- Persuasive
-- Easy to read
-- Well formatted
-      `;
-    } 
-    
-    else if (type === "followup") {
-      systemPrompt =
-        "You are a top-performing real estate agent following up with leads.";
-
-      userPrompt = `
-Create follow-up messages for this lead:
-
-${message}
-
-Return EXACTLY in this format:
-
-EMAIL:
-<email here>
-
-SMS:
-<short sms under 160 characters>
-      `;
-    } 
-    
-    else {
-      systemPrompt =
-        "You are a helpful real estate assistant helping users book showings.";
+      systemPrompt = "Write high-converting MLS listings.";
     }
 
-    /* =========================
-       🤖 OPENAI CALL (SAFE)
-    ========================= */
-    let aiResponse;
+    if (type === "followup") {
+      systemPrompt = "Write follow-up emails and SMS.";
+    }
+
+    let ai;
 
     try {
-      aiResponse = await client.chat.completions.create({
+      ai = await client.chat.completions.create({
         model: "gpt-4.1-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: message },
         ],
       });
     } catch (err) {
-      console.error("❌ OpenAI API Error:", err);
-      return res(500, "AI request failed");
+      console.error(err);
+      return response(500, "AI failed");
     }
 
-    const reply =
-      aiResponse?.choices?.[0]?.message?.content?.trim() ||
-      "No response generated";
+    const reply = ai?.choices?.[0]?.message?.content || "No reply";
 
-    /* =========================
-       🧠 FORCE CLEAN FORMAT (FOLLOWUP ONLY)
-    ========================= */
-    if (type === "followup") {
-      let email = "";
-      let sms = "";
-
-      if (reply.includes("SMS:")) {
-        email = reply.split("SMS:")[0].replace("EMAIL:", "").trim();
-        sms = reply.split("SMS:")[1].trim();
-      } else {
-        // fallback if AI messes up format
-        email = reply;
-        sms = "Follow-up message not clearly separated.";
-      }
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          reply,
-          email,
-          sms,
-        }),
-      };
-    }
-
-    /* =========================
-       ✅ NORMAL RESPONSE
-    ========================= */
     return {
       statusCode: 200,
       body: JSON.stringify({ reply }),
     };
 
-  } catch (error) {
-    console.error("❌ CHAT CRASH:", error);
-
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: error.message || "Server crashed",
-      }),
-    };
+  } catch (err) {
+    console.error(err);
+    return response(500, "Server crash");
   }
 };
 
-/* =========================
-   🔧 HELPER RESPONSE
-========================= */
-function res(code, msg) {
+function response(code, msg) {
   return {
     statusCode: code,
     body: JSON.stringify({ error: msg }),
