@@ -6,13 +6,6 @@ const client = new OpenAI({
 
 exports.handler = async (event) => {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Missing OpenAI key" }),
-      };
-    }
-
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
@@ -20,21 +13,7 @@ exports.handler = async (event) => {
       };
     }
 
-    /* =========================
-       📥 GET REQUEST DATA
-    ========================= */
-    let body;
-
-    try {
-      body = JSON.parse(event.body || "{}");
-    } catch (e) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Invalid JSON body" }),
-      };
-    }
-
-    const { message, type } = body;
+    const { message, type } = JSON.parse(event.body || "{}");
 
     if (!message) {
       return {
@@ -43,56 +22,42 @@ exports.handler = async (event) => {
       };
     }
 
-    /* =========================
-       🤖 PROMPT LOGIC
-    ========================= */
     let systemPrompt = "";
     let userPrompt = message;
 
-    if (type === "listing") {
+    if (type === "followup") {
       systemPrompt =
-        "You are a high-end real estate copywriter. Write compelling, emotional, MLS-ready property listings that sell.";
+        "You are a real estate agent creating high-converting follow-ups.";
 
       userPrompt = `
-Create a professional MLS listing.
+Create a follow-up for this lead:
 
 ${message}
 
-Make it:
-- Engaging
-- Persuasive
-- Easy to read
-- Well formatted
+Return ONLY valid JSON in this format:
+{
+  "email": "...",
+  "sms": "..."
+}
 `;
     } 
     
-    else if (type === "followup") {
+    else if (type === "listing") {
       systemPrompt =
-        "You are a top-performing real estate agent following up with leads to convert them into clients.";
+        "You are a real estate copywriter writing MLS listings.";
 
       userPrompt = `
-Create follow-up messages for this lead:
-
 ${message}
 
-Return EXACTLY in this format:
-
-EMAIL:
-<email here>
-
-SMS:
-<short sms under 160 characters>
+Return ONLY the listing text. No JSON.
 `;
     } 
     
     else {
       systemPrompt =
-        "You are a helpful real estate assistant helping users book showings and answer property questions.";
+        "You are a helpful real estate assistant.";
     }
 
-    /* =========================
-       🤖 OPENAI CALL
-    ========================= */
     const response = await client.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
@@ -101,7 +66,29 @@ SMS:
       ],
     });
 
-    const reply = response.choices[0].message.content;
+    let reply = response.choices[0].message.content;
+
+    // 🧠 Parse JSON safely for follow-ups
+    if (type === "followup") {
+      try {
+        const parsed = JSON.parse(reply);
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            email: parsed.email,
+            sms: parsed.sms,
+          }),
+        };
+      } catch (e) {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({
+            error: "AI response formatting failed",
+          }),
+        };
+      }
+    }
 
     return {
       statusCode: 200,
@@ -109,13 +96,9 @@ SMS:
     };
 
   } catch (error) {
-    console.error("❌ CHAT ERROR:", error);
-
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: error.message || "Server error",
-      }),
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };
