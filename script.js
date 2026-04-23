@@ -13,7 +13,7 @@ function showPanel(name) {
   if (panel) panel.classList.add('active');
 
   const tabs = document.querySelectorAll('.nav-tab');
-  const map = { tools: 0, followup: 1, listing: 2 };
+  const map = { tools: 0, followup: 1, listing: 2, booking: 3, embed: 4 };
 
   if (map[name] !== undefined && tabs[map[name]]) {
     tabs[map[name]].classList.add('active');
@@ -56,7 +56,7 @@ async function sendChat() {
     });
 
     const data = await response.json();
-    typingEl?.remove();
+    if (typingEl) typingEl.remove();
 
     if (!response.ok) {
       appendMsg(data.error || 'Server error', 'bot');
@@ -66,7 +66,7 @@ async function sendChat() {
     appendMsg(data.reply, 'bot');
 
   } catch (err) {
-    typingEl?.remove();
+    if (typingEl) typingEl.remove();
     appendMsg('Request failed: ' + err.message, 'bot');
   }
 }
@@ -111,7 +111,10 @@ Make it professional, emotional, and high-converting.
     const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: prompt, type: "listing" })
+      body: JSON.stringify({
+        message: prompt,
+        type: "listing"
+      })
     });
 
     const json = await res.json();
@@ -125,7 +128,6 @@ Make it professional, emotional, and high-converting.
     content.innerText = json.reply;
     resultBox.classList.add('visible');
 
-    document.getElementById('listing-placeholder')?.remove();
     document.getElementById('copy-listing-btn').style.display = 'block';
 
   } catch (err) {
@@ -138,7 +140,7 @@ Make it professional, emotional, and high-converting.
 }
 
 /* =========================
-   FOLLOW-UP GENERATOR
+   FOLLOW-UP GENERATOR + SAVE LEAD
 ========================= */
 
 async function generateFollowUp() {
@@ -155,22 +157,17 @@ async function generateFollowUp() {
   };
 
   const prompt = `
-Create follow-up messages for a real estate lead.
+Create follow-up messages for a real estate lead:
 
-Return EXACTLY in this format:
-
-EMAIL:
-<email here>
-
-SMS:
-<sms here>
-
-Lead:
 Name: ${data.name}
 Contact: ${data.contact}
 Source: ${data.source}
 Intent: ${data.type}
 Notes: ${data.notes}
+
+Return:
+1 email version
+1 SMS version (short, under 160 chars)
 `;
 
   const emailBox = document.getElementById('email-content');
@@ -183,7 +180,10 @@ Notes: ${data.notes}
     const res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: prompt, type: "followup" })
+      body: JSON.stringify({
+        message: prompt,
+        type: "followup"
+      })
     });
 
     const json = await res.json();
@@ -194,17 +194,12 @@ Notes: ${data.notes}
       return;
     }
 
-    // ✅ ROBUST PARSING
-    const email = json.reply.split("SMS:")[0]?.replace("EMAIL:", "").trim();
-    const sms = json.reply.split("SMS:")[1]?.trim();
+    const parts = json.reply.split("SMS");
 
-    emailBox.innerText = email || "No email generated";
-    smsBox.innerText = sms || "No SMS generated";
+    emailBox.innerText = parts[0] || json.reply;
+    smsBox.innerText = parts[1] || "SMS not separated clearly";
 
-    document.getElementById('email-placeholder')?.remove();
-    document.getElementById('sms-placeholder')?.remove();
-
-    // ✅ SAVE LEAD
+    // ✅ SAVE LEAD TO DASHBOARD
     saveLead({
       name: data.name || "Unknown",
       contact: data.contact || "N/A",
@@ -221,7 +216,7 @@ Notes: ${data.notes}
 }
 
 /* =========================
-   LEADS SYSTEM
+   LEAD DASHBOARD SYSTEM
 ========================= */
 
 let leads = JSON.parse(localStorage.getItem('propai_leads') || '[]');
@@ -266,18 +261,23 @@ function updateStats() {
   const weekAgo = new Date();
   weekAgo.setDate(now.getDate() - 7);
 
-  document.getElementById('stat-total').innerText = leads.length;
-  document.getElementById('stat-hot').innerText = leads.filter(l => l.status === 'Hot').length;
-  document.getElementById('stat-followup').innerText = leads.filter(l => l.status === 'Follow-up').length;
-  document.getElementById('stat-week').innerText =
-    leads.filter(l => new Date(l.date) > weekAgo).length;
+  const total = leads.length;
+  const hot = leads.filter(l => l.status === 'Hot').length;
+  const followup = leads.filter(l => l.status === 'Follow-up').length;
+  const week = leads.filter(l => new Date(l.date) > weekAgo).length;
+
+  document.getElementById('stat-total').innerText = total;
+  document.getElementById('stat-hot').innerText = hot;
+  document.getElementById('stat-followup').innerText = followup;
+  document.getElementById('stat-week').innerText = week;
 }
 
 function setDashboardDate() {
   const el = document.getElementById('dashboard-date');
   if (!el) return;
 
-  el.innerText = new Date().toLocaleDateString(undefined, {
+  const today = new Date();
+  el.innerText = today.toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',
     day: 'numeric'
@@ -294,6 +294,7 @@ function copyListing() {
 
   const el = document.getElementById('copy-success');
   el?.classList.add('visible');
+
   setTimeout(() => el?.classList.remove('visible'), 2500);
 }
 
@@ -301,13 +302,27 @@ function copyListing() {
    EMBED
 ========================= */
 
+function switchEmbedTab(btn, tab) {
+  document.querySelectorAll('.embed-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentEmbedTab = tab;
+  updateEmbedCode();
+}
+
 function updateEmbedCode() {
   const agency = document.getElementById('agency-name')?.value || 'Your Agency';
   const color = document.getElementById('primary-color')?.value || '#C9A84C';
-  const label = document.getElementById('bubble-label')?.value || 'Book a Showing';
+  const tools = document.getElementById('embed-tools')?.value || 'all';
+  const label = document.getElementById('bubble-label')?.value || 'Book a Showing'; // ✅ FIXED
   const pos = document.getElementById('bubble-pos')?.value || 'bottom-right';
 
-  const code = `<script>
+  let code = '';
+
+  if (currentEmbedTab === 'full') {
+    code = `<iframe src="https://propai.app/widget?agency=${agency}&color=${color}&tools=${tools}" width="100%" height="720"></iframe>`;
+  } 
+  else if (currentEmbedTab === 'chat') {
+    code = `<script>
 window.PropAIConfig = {
   agencyName: "${agency}",
   primaryColor: "${color}",
@@ -316,12 +331,23 @@ window.PropAIConfig = {
 };
 <\/script>
 <script src="https://propai.app/embed.js" async><\/script>`;
+  } 
+  else {
+    code = `WordPress shortcode version here`;
+  }
 
-  document.getElementById('embed-code-block').innerText = code;
+  const block = document.getElementById('embed-code-block');
+  if (block) block.innerText = code;
+}
+
+function copyEmbedCode() {
+  const text = document.getElementById('embed-code-block')?.innerText || '';
+  navigator.clipboard.writeText(text);
 }
 
 /* INIT */
 document.addEventListener('DOMContentLoaded', () => {
+  updateEmbedCode();
   renderLeads();
   updateStats();
   setDashboardDate();
