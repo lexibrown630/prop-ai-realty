@@ -4,6 +4,33 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PropAI — Real Estate Automation Platform</title>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
+
+// 🔒 Check session
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  window.location.href = "/login.html";
+} else {
+  const user = session.user;
+
+  const { data } = await supabase
+    .from("users")
+    .select("subscription_status")
+    .eq("email", user.email)
+    .maybeSingle();
+
+  if (!data || data.subscription_status !== "active") {
+    window.location.href = "/payments.html";
+  }
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
