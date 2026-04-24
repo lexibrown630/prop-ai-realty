@@ -6,9 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 /* 🔥 PLAN MAPPING */
 function getPlanFromPrice(priceId) {
-  if (priceId === "price_1TN45MRqy7IFyseNJtzPtgVC") return "starter";
-  if (priceId === "price_1TN46TRqy7IFyseNHEiBa8xe") return "pro";
-  if (priceId === "price_1TN47TRqy7IFyseNqnUSkEoO") return "agency";
+  if (priceId === "price_1TP9BERqy7IFyseNaZDNaYs2") return "main"; // 👈 monthly ONLY
   return "starter";
 }
 
