@@ -1,0 +1,51 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Loading...</title>
+</head>
+<body>
+  <p style="font-family:sans-serif;text-align:center;margin-top:40px;">
+    Signing you in...
+  </p>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://jrmqdojsxjtkjpczaysp.supabase.co",
+  "sb_publishable_1YMQSjBmwLytMgeewMHxPQ_guXEPe3v"
+);
+
+// 🔥 CRITICAL: wait for session from magic link
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  console.log("❌ No session");
+  window.location.href = "/login.html";
+} else {
+  const user = session.user;
+  console.log("✅ Logged in:", user.email);
+
+  // 🔍 Check your users table (created by Stripe webhook)
+  const { data, error } = await supabase
+    .from("users")
+    .select("subscription_status, plan")
+    .eq("email", user.email)
+    .maybeSingle(); // 🔥 important change
+
+  console.log("📊 DB RESULT:", data);
+
+  // 🚨 If user does NOT exist OR not active → send to payments
+  if (!data || data.subscription_status !== "active") {
+    console.log("➡️ Sending to payments");
+    window.location.href = "/payments.html";
+  } else {
+    console.log("➡️ Sending to dashboard");
+    window.location.href = "/index.html";
+  }
+}
+</script>
+
+</body>
+</html>
