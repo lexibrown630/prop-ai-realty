@@ -2,7 +2,6 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.handler = async (event) => {
   try {
-    // ✅ Only allow POST
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
@@ -10,7 +9,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // ✅ Parse request
     const { email, userId } = JSON.parse(event.body || "{}");
 
     if (!email) {
@@ -20,11 +18,14 @@ exports.handler = async (event) => {
       };
     }
 
-    // 🔍 Check if customer exists
+    // ✅ CLEAN EMAIL (IMPORTANT)
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 🔍 CHECK CUSTOMER
     let customer;
 
     const existingCustomers = await stripe.customers.list({
-      email: email,
+      email: cleanEmail,
       limit: 1,
     });
 
@@ -33,52 +34,51 @@ exports.handler = async (event) => {
       console.log("👤 Existing customer:", customer.id);
     } else {
       customer = await stripe.customers.create({
-        email: email,
+        email: cleanEmail,
       });
       console.log("🆕 New customer created:", customer.id);
     }
 
-    // ✅ CREATE CHECKOUT SESSION
+    // 💳 CHECKOUT SESSION
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-
       customer: customer.id,
 
       payment_method_types: ["card"],
 
       line_items: [
         {
-          price: "price_1TP9DMRqy7IFyseNPEDk3coa", // Startup fee 
+          price: "price_1TP9DMRqy7IFyseNPEDk3coa", // $50 setup fee
           quantity: 1,
         },
         {
-          price: "price_1TP9BERqy7IFyseNaZDNaYs2", // Monthly  
+          price: "price_1TP9BERqy7IFyseNaZDNaYs2", // $100/month
           quantity: 1,
         },
       ],
 
       metadata: {
         user_id: userId,
+        email: cleanEmail,
       },
 
-      success_url: "https://prop-ai-realty.netlify.app/index.html?success=true",
-      cancel_url: "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
+      success_url:
+        "https://prop-ai-realty.netlify.app/index.html?success=true",
+      cancel_url:
+        "https://prop-ai-realty.netlify.app/payments.html?canceled=true",
     });
 
-    // 🚨 Safety check
     if (!session.url) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "No checkout URL returned from Stripe" }),
+        body: JSON.stringify({ error: "No checkout URL returned" }),
       };
     }
 
-    // ✅ Return URL
     return {
       statusCode: 200,
       body: JSON.stringify({ url: session.url }),
     };
-
   } catch (err) {
     console.error("❌ STRIPE ERROR:", err);
 
