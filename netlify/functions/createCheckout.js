@@ -48,11 +48,11 @@ exports.handler = async (event) => {
 
       line_items: [
         {
-          price: "price_1TP9DMRqy7IFyseNPEDk3coa", 
+          price: "price_1TP9DMRqy7IFyseNPEDk3coa", // Startup fee 
           quantity: 1,
         },
         {
-          price: "price_1TP9BERqy7IFyseNaZDNaYs2", 
+          price: "price_1TP9BERqy7IFyseNaZDNaYs2", // Monthly  
           quantity: 1,
         },
       ],
